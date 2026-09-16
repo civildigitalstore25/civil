@@ -1,0 +1,2 @@
+// Frontend routing configuration
+export {};
