@@ -1,9 +1,6 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
 import { config } from './config/index.js';
 import User from './models/User.js';
-
-dotenv.config();
 
 export const seedSuperAdmin = async (): Promise<void> => {
   try {
@@ -12,7 +9,7 @@ export const seedSuperAdmin = async (): Promise<void> => {
 
     console.log(`Checking for Superadmin account (${email})...`);
 
-    let superAdmin = await User.findOne({ email });
+    let superAdmin = await User.findOne({ email }).select('+password');
 
     if (superAdmin) {
       console.log('Superadmin account already exists.');

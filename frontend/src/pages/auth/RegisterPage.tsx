@@ -3,11 +3,18 @@ import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../../components/auth/AuthLayout';
 import AuthInput from '../../components/auth/AuthInput';
 import PasswordInput from '../../components/auth/PasswordInput';
+import GoogleButton from '../../components/auth/GoogleButton';
+import AuthDivider from '../../components/auth/AuthDivider';
 import { useAuth } from '../../hooks/useAuth';
+import {
+  AUTH_ROUTES,
+  AUTH_SUCCESS_MESSAGES,
+  PHONE_PATTERN,
+} from '../../constants/auth';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register, googleSignIn } = useAuth();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -27,7 +34,6 @@ export const RegisterPage: React.FC = () => {
   }
 
   const [errors, setErrors] = useState<Errors>({});
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,6 +53,8 @@ export const RegisterPage: React.FC = () => {
 
     if (!mobileNumber.trim()) {
       newErrors.mobileNumber = 'Mobile number is required';
+    } else if (!PHONE_PATTERN.test(mobileNumber.replace(/[\s-]/g, ''))) {
+      newErrors.mobileNumber = 'Please enter a valid mobile number';
     }
 
     if (!password) {
@@ -86,26 +94,27 @@ export const RegisterPage: React.FC = () => {
       return;
     }
 
-    setToastMessage('Account created successfully! Auto logging in...');
+    navigate(AUTH_ROUTES.home, {
+      replace: true,
+      state: { authMessage: AUTH_SUCCESS_MESSAGES.register },
+    });
+  };
 
-    setTimeout(() => {
-      navigate('/account', { replace: true });
-    }, 1200);
+  const handleGoogleCredential = async (credential: string) => {
+    const result = await googleSignIn(credential);
+    if (result.success) {
+      navigate(AUTH_ROUTES.home, {
+        replace: true,
+        state: { authMessage: AUTH_SUCCESS_MESSAGES.google },
+      });
+    } else {
+      setErrors({ general: result.error || 'Google sign-up failed.' });
+    }
   };
 
   return (
     <AuthLayout type="register">
       <div className="space-y-4">
-        {/* Toast / Notification Banner */}
-        {toastMessage && (
-          <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold rounded-xl flex items-center gap-2 animate-fade-in">
-            <svg className="w-4 h-4 shrink-0 fill-current" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            <span>{toastMessage}</span>
-          </div>
-        )}
-
         {/* General Error Banner */}
         {errors.general && (
           <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl flex items-center gap-2 animate-fade-in">
@@ -125,6 +134,12 @@ export const RegisterPage: React.FC = () => {
             Free account setup. Instant download access after registration.
           </p>
         </div>
+
+        <GoogleButton
+          onCredential={handleGoogleCredential}
+          onError={() => setErrors({ general: 'Google sign-up was cancelled or failed.' })}
+        />
+        <AuthDivider text="or create an account with email" />
 
         {/* Register Form */}
         <form onSubmit={handleSubmit} className="space-y-3.5">

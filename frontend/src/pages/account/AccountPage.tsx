@@ -105,6 +105,13 @@ export const AccountPage: React.FC = () => {
               My Orders
             </Link>
 
+            <Link
+              to="/account/password"
+              className="bg-white/10 hover:bg-white/20 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all border border-white/20"
+            >
+              Change Password
+            </Link>
+
             <button
               onClick={handleLogout}
               className="bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-bold text-xs px-4 py-2.5 rounded-xl transition-all border border-rose-500/30 cursor-pointer"

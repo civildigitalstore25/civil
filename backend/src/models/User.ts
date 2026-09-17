@@ -2,12 +2,19 @@ import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export type UserRole = 'user' | 'admin' | 'superadmin';
+export type AuthProvider = 'local' | 'google';
 
 export interface IUser extends Document {
   name: string;
   email: string;
   phone: string;
   password?: string;
+  authProvider: AuthProvider;
+  googleId?: string;
+  passwordResetTokenHash?: string;
+  passwordResetExpiresAt?: Date;
+  passwordChangedAt?: Date;
+  tokenVersion: number;
   role: UserRole;
   permissions: string[];
   createdAt: Date;
@@ -31,14 +38,38 @@ const userSchema = new Schema<IUser>(
     },
     phone: {
       type: String,
-      required: [true, 'Phone number is required'],
       trim: true,
+      default: '',
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
-      minlength: 6,
+      minlength: 8,
       select: false, // Don't return password by default in queries
+    },
+    authProvider: {
+      type: String,
+      enum: ['local', 'google'],
+      default: 'local',
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      select: false,
+    },
+    passwordResetTokenHash: {
+      type: String,
+      select: false,
+    },
+    passwordResetExpiresAt: {
+      type: Date,
+      select: false,
+    },
+    passwordChangedAt: Date,
+    tokenVersion: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     role: {
       type: String,

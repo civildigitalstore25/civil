@@ -3,11 +3,11 @@ import AuthLogo from './AuthLogo';
 import AuthStats from './AuthStats';
 
 interface AuthPromoPanelProps {
-  type: 'login' | 'register';
+  type: 'login' | 'register' | 'password';
 }
 
 export const AuthPromoPanel: React.FC<AuthPromoPanelProps> = ({ type }) => {
-  const isLogin = type === 'login';
+  const isLogin = type !== 'register';
 
   const loginBenefits = [
     'Instant digital download after payment',

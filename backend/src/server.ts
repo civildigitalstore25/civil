@@ -1,10 +1,7 @@
 import app from './app.js';
-import dotenv from 'dotenv';
 import { connectDB } from './config/db.js';
 import { config } from './config/index.js';
 import { seedSuperAdmin } from './seed.js';
-
-dotenv.config();
 
 const startServer = async () => {
   try {

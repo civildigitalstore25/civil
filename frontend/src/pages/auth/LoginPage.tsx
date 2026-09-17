@@ -1,23 +1,22 @@
 import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AuthLayout from '../../components/auth/AuthLayout';
 import AuthInput from '../../components/auth/AuthInput';
 import PasswordInput from '../../components/auth/PasswordInput';
 import GoogleButton from '../../components/auth/GoogleButton';
 import AuthDivider from '../../components/auth/AuthDivider';
 import { useAuth } from '../../hooks/useAuth';
+import { AUTH_ROUTES, AUTH_SUCCESS_MESSAGES } from '../../constants/auth';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { login } = useAuth();
+  const { login, googleSignIn } = useAuth();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
   const [errors, setErrors] = useState<{ identifier?: string; password?: string; general?: string }>({});
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,32 +48,28 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
-    const loggedUser = result.user;
-    setToastMessage(`Welcome back, ${loggedUser.name}! Redirecting...`);
+    navigate(AUTH_ROUTES.home, {
+      replace: true,
+      state: { authMessage: AUTH_SUCCESS_MESSAGES.login },
+    });
+  };
 
-    setTimeout(() => {
-      if (loggedUser.role === 'admin' || loggedUser.role === 'superadmin') {
-        navigate('/admin/dashboard', { replace: true });
-      } else {
-        const fromPath = (location.state as any)?.from?.pathname;
-        navigate(fromPath || '/account', { replace: true });
-      }
-    }, 1000);
+  const handleGoogleCredential = async (credential: string) => {
+    setErrors({});
+    const result = await googleSignIn(credential);
+    if (!result.success || !result.user) {
+      setErrors({ general: result.error || 'Google sign-in failed.' });
+      return;
+    }
+    navigate(AUTH_ROUTES.home, {
+      replace: true,
+      state: { authMessage: AUTH_SUCCESS_MESSAGES.google },
+    });
   };
 
   return (
     <AuthLayout type="login">
       <div className="space-y-5">
-        {/* Toast / Notification Banner */}
-        {toastMessage && (
-          <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold rounded-xl flex items-center gap-2 animate-fade-in">
-            <svg className="w-4 h-4 shrink-0 fill-current" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            <span>{toastMessage}</span>
-          </div>
-        )}
-
         {/* General Error Banner */}
         {errors.general && (
           <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl flex items-center gap-2 animate-fade-in">
@@ -95,25 +90,10 @@ export const LoginPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Quick Demo Credentials Info */}
-        <div className="p-3 bg-amber-50/90 border border-amber-200/90 rounded-xl text-[11px] text-amber-900 space-y-1.5">
-          <p className="font-bold flex items-center gap-1 text-[#F5A000]">
-            <span>⚡</span> Credentials:
-          </p>
-          <div className="flex flex-col space-y-1 text-[10px]">
-            <div>
-              <span className="font-extrabold text-purple-900 bg-purple-100 px-1 py-0.5 rounded mr-1">SUPERADMIN:</span>
-              <code className="bg-amber-100/80 px-1 py-0.5 rounded font-mono select-all text-amber-950">civildigitalstore25@gmail.com</code> | <code className="bg-amber-100/80 px-1 py-0.5 rounded font-mono select-all text-amber-950">CivilDigitalStore25@#</code>
-            </div>
-          </div>
-        </div>
-
         {/* Google CTA Button */}
         <GoogleButton
-          onClick={() => {
-            setToastMessage('Google Sign-In demo initialized');
-            setTimeout(() => setToastMessage(null), 2500);
-          }}
+          onCredential={handleGoogleCredential}
+          onError={() => setErrors({ general: 'Google sign-in was cancelled or failed.' })}
         />
 
         {/* Divider */}
@@ -145,16 +125,12 @@ export const LoginPage: React.FC = () => {
             }}
             error={errors.password}
             rightLabelAction={
-              <a
-                href="#forgot-password"
-                onClick={(e) => {
-                  e.preventDefault();
-                  alert('Demo Mode: Default passwords are admin123 (admin) and 12345678 (user).');
-                }}
+              <Link
+                to="/forgot-password"
                 className="text-xs font-semibold text-[#F5A000] hover:text-amber-600 transition-colors"
               >
                 Forgot password?
-              </a>
+              </Link>
             }
           />
 

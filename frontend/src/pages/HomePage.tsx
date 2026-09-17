@@ -9,10 +9,12 @@ import NewArrivalsSection from '../components/home/NewArrivalsSection';
 import HomeProductShowcase from '../components/home/HomeProductShowcase';
 import HomeReviewsSection from '../components/home/HomeReviewsSection';
 import WhatsAppButton from '../components/common/WhatsAppButton';
+import AuthSuccessBanner from '../components/common/AuthSuccessBanner';
 
 export const HomePage = () => {
   return (
     <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans selection:bg-[#F5A623] selection:text-white">
+      <AuthSuccessBanner />
       {/* Fixed Sticky Top Header */}
       <header className="sticky top-0 z-50 w-full shadow-md">
         {/* Top Announcement Bar */}

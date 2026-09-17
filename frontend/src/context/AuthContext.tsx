@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
-import type { User, RegisterUserData, UserRole } from '../types/user';
+import type { User, RegisterUserData, UserRole, AuthResult, PasswordChangeData } from '../types/user';
 import { authService } from '../services/authService';
 import { initializeAppData } from '../utils/seedData';
 
@@ -11,7 +11,11 @@ export interface AuthContextType {
   users: User[];
   login: (identifier: string, password: string) => Promise<{ success: boolean; user?: User; error?: string }>;
   register: (data: RegisterUserData) => Promise<{ success: boolean; user?: User; error?: string }>;
-  logout: () => void;
+  googleSignIn: (credential: string) => Promise<AuthResult>;
+  forgotPassword: (email: string) => Promise<AuthResult>;
+  resetPassword: (token: string, password: string) => Promise<AuthResult>;
+  changePassword: (data: PasswordChangeData) => Promise<AuthResult>;
+  logout: () => Promise<void>;
   updateProfile: (data: Partial<User>) => Promise<{ success: boolean; user?: User; error?: string }>;
   updateUserRole: (userId: string, role: UserRole) => Promise<{ success: boolean; user?: User; error?: string }>;
   updateUserPermissions: (userId: string, permissions: string[]) => Promise<{ success: boolean; user?: User; error?: string }>;
@@ -73,8 +77,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return result;
   }, []);
 
-  const logout = useCallback(() => {
-    authService.logout();
+  const googleSignIn = useCallback(async (credential: string) => {
+    const result = await authService.googleSignIn(credential);
+    if (result.user) setCurrentUser(result.user);
+    return result;
+  }, []);
+
+  const forgotPassword = useCallback(
+    (email: string) => authService.forgotPassword(email),
+    [],
+  );
+  const resetPassword = useCallback(
+    (token: string, password: string) => authService.resetPassword(token, password),
+    [],
+  );
+  const changePassword = useCallback(
+    (data: PasswordChangeData) => authService.changePassword(data),
+    [],
+  );
+
+  const logout = useCallback(async () => {
+    await authService.logout();
     setCurrentUser(null);
     setUsers([]);
   }, []);
@@ -139,6 +162,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       users,
       login,
       register,
+      googleSignIn,
+      forgotPassword,
+      resetPassword,
+      changePassword,
       logout,
       updateProfile,
       updateUserRole,
@@ -155,6 +182,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       users,
       login,
       register,
+      googleSignIn,
+      forgotPassword,
+      resetPassword,
+      changePassword,
       logout,
       updateProfile,
       updateUserRole,

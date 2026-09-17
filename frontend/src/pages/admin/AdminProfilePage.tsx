@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -8,7 +9,6 @@ export const AdminProfilePage: React.FC = () => {
   const [name, setName] = useState(currentUser?.name || '');
   const [email, setEmail] = useState(currentUser?.email || '');
   const [phone, setPhone] = useState(currentUser?.phone || '');
-  const [password, setPassword] = useState(currentUser?.password || '');
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +29,6 @@ export const AdminProfilePage: React.FC = () => {
       name: name.trim(),
       email: email.trim(),
       phone: phone.trim(),
-      password,
     });
 
     setIsSaving(false);
@@ -115,15 +114,12 @@ export const AdminProfilePage: React.FC = () => {
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700">Password</label>
-              <input
-                type="text"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F5A000]/30"
-              />
-            </div>
+            <Link
+              to="/account/password"
+              className="inline-block text-xs font-bold text-[#F5A000] hover:underline"
+            >
+              Change password securely
+            </Link>
 
             <div className="border-t border-slate-100 pt-4 flex justify-end">
               <button

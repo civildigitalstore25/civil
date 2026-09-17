@@ -7,7 +7,7 @@ import Navbar from '../layout/Navbar';
 import Footer from '../layout/Footer';
 
 interface AuthLayoutProps {
-  type: 'login' | 'register';
+  type: 'login' | 'register' | 'password';
   children: React.ReactNode;
 }
 

@@ -5,7 +5,6 @@ export interface User {
   name: string;
   email: string;
   phone: string;
-  password?: string;
   role: UserRole;
   permissions?: string[];
   createdAt: string;
@@ -16,4 +15,16 @@ export interface RegisterUserData {
   email: string;
   mobileNumber: string;
   password: string;
+}
+
+export interface AuthResult {
+  success: boolean;
+  user?: User;
+  error?: string;
+  message?: string;
+}
+
+export interface PasswordChangeData {
+  currentPassword: string;
+  newPassword: string;
 }

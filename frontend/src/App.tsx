@@ -5,6 +5,9 @@ import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
+import ChangePasswordPage from './pages/auth/ChangePasswordPage';
 import AccountPage from './pages/account/AccountPage';
 import MyOrdersPage from './pages/account/MyOrdersPage';
 import SlugResolver from './routes/SlugResolver';
@@ -40,6 +43,8 @@ function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/cart" element={<CartPage />} />
                 <Route path="/checkout" element={<CheckoutPage />} />
                 <Route path="/products" element={<ProductListingPage />} />
@@ -50,6 +55,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <AccountPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/account/password"
+                  element={
+                    <ProtectedRoute>
+                      <ChangePasswordPage />
                     </ProtectedRoute>
                   }
                 />

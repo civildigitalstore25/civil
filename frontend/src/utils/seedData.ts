@@ -13,7 +13,6 @@ export const DEFAULT_ADMIN: User = {
   name: 'Civil Digital Store Admin',
   email: 'admin@civildigitalstore.com',
   phone: '9999999999',
-  password: 'admin123',
   role: 'admin',
   createdAt: new Date().toISOString(),
 };
@@ -23,7 +22,6 @@ export const INITIAL_SAMPLE_USER: User = {
   name: 'Rahul Sharma',
   email: 'rahul@example.com',
   phone: '9876543210',
-  password: '12345678',
   role: 'user',
   createdAt: new Date().toISOString(),
 };
@@ -82,18 +80,23 @@ export const INITIAL_SAMPLE_ORDERS: Order[] = [
 ];
 
 export const initializeAppData = (): void => {
+  storageService.removeItem(STORAGE_KEYS.LEGACY_AUTH_TOKEN);
+
   // 1. Seed Users if civil_users doesn't exist
   const existingUsers = storageService.getItem<User[]>(STORAGE_KEYS.USERS, []);
   if (!existingUsers || existingUsers.length === 0) {
     storageService.setItem<User[]>(STORAGE_KEYS.USERS, [DEFAULT_ADMIN, INITIAL_SAMPLE_USER]);
   } else {
-    // Ensure default admin exists without creating duplicates
-    const adminExists = existingUsers.some(
+    const sanitizedUsers = (
+      existingUsers as Array<User & { password?: string }>
+    ).map(({ password: _removedPassword, ...user }) => user);
+    const adminExists = sanitizedUsers.some(
       (u) => u.email.toLowerCase() === DEFAULT_ADMIN.email.toLowerCase()
     );
-    if (!adminExists) {
-      storageService.setItem<User[]>(STORAGE_KEYS.USERS, [DEFAULT_ADMIN, ...existingUsers]);
-    }
+    storageService.setItem<User[]>(
+      STORAGE_KEYS.USERS,
+      adminExists ? sanitizedUsers : [DEFAULT_ADMIN, ...sanitizedUsers],
+    );
   }
 
   // 2. Seed Products if civil_products doesn't exist, or migrate fields if missing
