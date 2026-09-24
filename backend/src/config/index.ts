@@ -2,8 +2,13 @@ import dotenv from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const configDirectory = path.dirname(fileURLToPath(import.meta.url));
-dotenv.config({ path: path.resolve(configDirectory, '../../.env.local') });
+// Local only — on Vercel, env vars come from the project settings.
+try {
+  const configDirectory = path.dirname(fileURLToPath(import.meta.url));
+  dotenv.config({ path: path.resolve(configDirectory, '../../.env.local') });
+} catch {
+  // Ignore missing .env.local in production/serverless.
+}
 
 const required = (name: string): string => {
   const value = process.env[name]?.trim();

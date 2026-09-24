@@ -14,6 +14,11 @@ app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Liveness only — does not touch MongoDB (use this to confirm the function boots).
+app.get('/health', (_req, res) => {
+  res.json({ ok: true });
+});
+
 app.use(async (_req: Request, _res: Response, next: NextFunction) => {
   try {
     await ensureDbReady();
@@ -23,10 +28,19 @@ app.use(async (_req: Request, _res: Response, next: NextFunction) => {
   }
 });
 
-app.get('/health', (_req, res) => {
-  res.json({ ok: true });
+app.get('/', (_req, res) => {
+  res.json({ ok: true, service: 'civil-backend' });
 });
 
 app.use('/api', routes);
+
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  const message = err instanceof Error ? err.message : 'Internal Server Error';
+  console.error('Request failed:', err);
+  res.status(500).json({
+    error: 'Internal Server Error',
+    message,
+  });
+});
 
 export default app;

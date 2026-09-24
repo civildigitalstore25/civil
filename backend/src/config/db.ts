@@ -13,7 +13,9 @@ export const connectDB = async (): Promise<void> => {
   }
 
   try {
-    const conn = await mongoose.connect(config.mongoUri);
+    const conn = await mongoose.connect(config.mongoUri, {
+      serverSelectionTimeoutMS: 10_000,
+    });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`MongoDB Connection Error: ${(error as Error).message}`);
@@ -27,7 +29,11 @@ export const ensureDbReady = async (): Promise<void> => {
     globalThis.__civilDbReady = (async () => {
       await connectDB();
       await seedSuperAdmin();
-    })();
+    })().catch((error) => {
+      // Allow the next request to retry after a transient failure.
+      globalThis.__civilDbReady = undefined;
+      throw error;
+    });
   }
 
   await globalThis.__civilDbReady;
