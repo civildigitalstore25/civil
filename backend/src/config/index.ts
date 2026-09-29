@@ -6,8 +6,9 @@ import { fileURLToPath } from 'node:url';
 try {
   const configDirectory = path.dirname(fileURLToPath(import.meta.url));
   dotenv.config({ path: path.resolve(configDirectory, '../../.env.local') });
+  dotenv.config({ path: path.resolve(configDirectory, '../../.env') });
 } catch {
-  // Ignore missing .env.local in production/serverless.
+  // Ignore missing env files in production/serverless.
 }
 
 const required = (name: string): string => {

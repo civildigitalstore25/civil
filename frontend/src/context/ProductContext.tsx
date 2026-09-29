@@ -7,9 +7,12 @@ interface ProductContextType {
   refreshProducts: () => void;
   getProductBySlug: (slug: string) => Product | undefined;
   getProductById: (id: string) => Product | undefined;
-  addProduct: (data: Partial<Product> & { name: string; price: number }) => { success: boolean; product?: Product; error?: string };
-  updateProduct: (id: string, data: Partial<Product>) => { success: boolean; product?: Product; error?: string };
+  addProduct: (data: Partial<Product> & { name: string; price: number }, isDraft?: boolean) => { success: boolean; product?: Product; error?: string };
+  updateProduct: (id: string, data: Partial<Product>, isDraft?: boolean) => { success: boolean; product?: Product; error?: string };
   deleteProduct: (id: string) => { success: boolean; error?: string };
+  bulkDeleteProducts: (ids: string[]) => { success: boolean; count: number };
+  toggleBestSeller: (id: string) => void;
+  toggleOutOfStock: (id: string) => void;
 }
 
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
@@ -35,21 +38,21 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const getProductById = useCallback(
     (id: string) => {
-      return products.find((p) => p.id === id);
+      return products.find((p) => p.id === id || p._id === id);
     },
     [products]
   );
 
-  const addProduct = useCallback((data: Partial<Product> & { name: string; price: number }) => {
-    const result = productService.addProduct(data);
+  const addProduct = useCallback((data: Partial<Product> & { name: string; price: number }, isDraft = false) => {
+    const result = productService.addProduct(data, isDraft);
     if (result.success) {
       setProducts(productService.getProducts());
     }
     return result;
   }, []);
 
-  const updateProduct = useCallback((id: string, data: Partial<Product>) => {
-    const result = productService.updateProduct(id, data);
+  const updateProduct = useCallback((id: string, data: Partial<Product>, isDraft = false) => {
+    const result = productService.updateProduct(id, data, isDraft);
     if (result.success) {
       setProducts(productService.getProducts());
     }
@@ -64,6 +67,28 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return result;
   }, []);
 
+  const bulkDeleteProducts = useCallback((ids: string[]) => {
+    const result = productService.bulkDeleteProducts(ids);
+    if (result.success) {
+      setProducts(productService.getProducts());
+    }
+    return result;
+  }, []);
+
+  const toggleBestSeller = useCallback((id: string) => {
+    const result = productService.toggleBestSeller(id);
+    if (result.success) {
+      setProducts(productService.getProducts());
+    }
+  }, []);
+
+  const toggleOutOfStock = useCallback((id: string) => {
+    const result = productService.toggleOutOfStock(id);
+    if (result.success) {
+      setProducts(productService.getProducts());
+    }
+  }, []);
+
   const contextValue = useMemo(
     () => ({
       products,
@@ -73,8 +98,22 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
       addProduct,
       updateProduct,
       deleteProduct,
+      bulkDeleteProducts,
+      toggleBestSeller,
+      toggleOutOfStock,
     }),
-    [products, refreshProducts, getProductBySlug, getProductById, addProduct, updateProduct, deleteProduct]
+    [
+      products,
+      refreshProducts,
+      getProductBySlug,
+      getProductById,
+      addProduct,
+      updateProduct,
+      deleteProduct,
+      bulkDeleteProducts,
+      toggleBestSeller,
+      toggleOutOfStock,
+    ]
   );
 
   return <ProductContext.Provider value={contextValue}>{children}</ProductContext.Provider>;
