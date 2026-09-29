@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { productCatalogFields } from './productCatalogFields.js';
 
 export interface IKeyFeature {
   icon: string;
@@ -70,18 +71,18 @@ const productSchema = new Schema<IProduct>(
     name: { type: String, required: true, trim: true },
     version: { type: String, trim: true, default: '' },
     slug: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    category: { type: String, required: true, default: 'Softwares' },
-    categorySlug: { type: String, required: true, default: 'softwares' },
-    software: { type: String, required: true, default: 'AutoCAD' },
-    format: { type: String, default: 'ZIP' },
-    fileSize: { type: String, default: '100 MB' },
+    category: { type: String, default: '' },
+    categorySlug: { type: String, default: '' },
+    software: { type: String, default: '' },
+    format: { type: String, default: '' },
+    fileSize: { type: String, default: '' },
     price: { type: Number, required: true, default: 0 },
     oldPrice: { type: Number, default: 0 },
     discountPercent: { type: Number, default: 0 },
-    rating: { type: Number, default: 4.8 },
-    reviewCount: { type: Number, default: 1 },
+    rating: { type: Number, default: 0 },
+    reviewCount: { type: Number, default: 0 },
     downloadsCount: { type: Number, default: 0 },
-    badge: { type: String, default: 'New' },
+    badge: { type: String, default: '' },
     isBestSeller: { type: Boolean, default: false },
     isNewArrival: { type: Boolean, default: false },
     isOutOfStock: { type: Boolean, default: false },
@@ -90,28 +91,29 @@ const productSchema = new Schema<IProduct>(
     longDescription: { type: String, default: '' },
     detailsDescription: { type: String, default: '' },
     description: { type: [String], default: [] },
-    includedFiles: { type: [String], default: ['Digital Download Files'] },
+    includedFiles: { type: [String], default: [] },
     images: { type: [String], default: [] },
     specifications: {
-      format: { type: String, default: 'ZIP' },
-      fileSize: { type: String, default: '100 MB' },
-      software: { type: String, default: 'AutoCAD' },
-      version: { type: String, default: 'Latest' },
-      compatibility: { type: String, default: 'Windows 10/11' },
-      delivery: { type: String, default: 'Instant Digital Download' },
-      access: { type: String, default: 'Lifetime Unlimited' }
+      format: { type: String, default: '' },
+      fileSize: { type: String, default: '' },
+      software: { type: String, default: '' },
+      version: { type: String, default: '' },
+      compatibility: { type: String, default: '' },
+      delivery: { type: String, default: '' },
+      access: { type: String, default: '' }
     },
     compatibility: {
-      supportedSoftware: { type: String, default: 'AutoCAD' },
-      compatibleVersions: { type: String, default: 'All Recent Versions' },
-      os: { type: String, default: 'Windows 10 / 11 (64-bit)' },
-      fileTypes: { type: String, default: 'ZIP' },
-      requirements: { type: String, default: '4GB RAM' }
+      supportedSoftware: { type: String, default: '' },
+      compatibleVersions: { type: String, default: '' },
+      os: { type: String, default: '' },
+      fileTypes: { type: String, default: '' },
+      requirements: { type: String, default: '' }
     },
     seoTitle: { type: String, default: '' },
     seoDescription: { type: String, default: '' },
     seoKeywords: { type: [String], default: [] },
-    keyFeatures: { type: [keyFeatureSchema], default: [] }
+    keyFeatures: { type: [keyFeatureSchema], default: [] },
+    ...productCatalogFields,
   },
   {
     timestamps: true

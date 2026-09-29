@@ -49,6 +49,16 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
       ),
     },
     {
+      key: 'brands',
+      name: 'Brands',
+      path: '/admin/brands',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 11h.01M7 15h.01M11 7h8M11 11h8M11 15h8" />
+        </svg>
+      ),
+    },
+    {
       key: 'categories',
       name: 'Categories',
       path: '/admin/categories',
@@ -105,6 +115,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
     if (!currentUser) return false;
     if (currentUser.role === 'superadmin') return true;
     if (!currentUser.permissions || currentUser.permissions.length === 0) return true;
+    if (item.key === 'brands') {
+      return currentUser.permissions.includes('brands') || currentUser.permissions.includes('categories');
+    }
     return currentUser.permissions.includes(item.key);
   });
 

@@ -52,7 +52,7 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
     const products = await Product.find(filter)
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(Number(limit));
+      .limit(Number(limit) || 200);
 
     res.json({
       success: true,
@@ -63,6 +63,20 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch products', error });
+  }
+};
+
+export const getProductBySlug = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const slug = String(req.params.slug || '').trim().toLowerCase();
+    const product = await Product.findOne({ slug });
+    if (!product) {
+      res.status(404).json({ success: false, message: 'Product not found' });
+      return;
+    }
+    res.json({ success: true, product });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch product', error });
   }
 };
 
@@ -101,9 +115,24 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
     }
 
     data.slug = slug;
+    data.software = data.software || data.brand || '';
+    data.brand = data.brand || data.software || '';
+    data.categorySlug = data.category
+      ? String(data.categorySlug || data.category)
+          .toLowerCase()
+          .trim()
+          .replace(/[^\w\s-]/g, '')
+          .replace(/[\s_-]+/g, '-')
+      : '';
+    if (!Array.isArray(data.images) || data.images.length === 0) {
+      data.images = [data.imageUrl, ...(data.additionalImages || [])].filter(Boolean);
+    }
+    data.shortDescription = data.shortDescription || '';
     const price = Number(data.price) || 0;
-    const oldPrice = Number(data.oldPrice) || price;
-    data.discountPercent = oldPrice > price ? Math.round(((oldPrice - price) / oldPrice) * 100) : (data.discountPercent || 0);
+    const oldPrice = Number(data.oldPrice) || 0;
+    data.price = price;
+    data.oldPrice = oldPrice;
+    data.discountPercent = oldPrice > price ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
 
     const product = await Product.create(data);
     res.status(201).json({ success: true, product });
@@ -135,8 +164,8 @@ export const updateProduct = async (req: Request, res: Response): Promise<void> 
 
     if (data.price !== undefined || data.oldPrice !== undefined) {
       const existing = await Product.findById(id);
-      const price = data.price !== undefined ? Number(data.price) : (existing?.price || 0);
-      const oldPrice = data.oldPrice !== undefined ? Number(data.oldPrice) : (existing?.oldPrice || price);
+      const price = data.price !== undefined ? Number(data.price) || 0 : (existing?.price || 0);
+      const oldPrice = data.oldPrice !== undefined ? Number(data.oldPrice) || 0 : (existing?.oldPrice || 0);
       data.discountPercent = oldPrice > price ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0;
     }
 

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus,
   Search,
@@ -11,13 +12,13 @@ import {
 } from 'lucide-react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import ConfirmModal from '../../components/admin/ConfirmModal';
-import { ProductFormModal } from '../../components/admin/ProductFormModal';
 import { ProductDetailsModal } from '../../components/admin/ProductDetailsModal';
 import { useProducts } from '../../context/ProductContext';
 import type { Product } from '../../types/product';
 
 export const AdminDraftProductsPage: React.FC = () => {
-  const { products, addProduct, updateProduct, deleteProduct } = useProducts();
+  const navigate = useNavigate();
+  const { products, deleteProduct } = useProducts();
 
   // Search & Filter State
   const [searchInput, setSearchInput] = useState('');
@@ -28,8 +29,6 @@ export const AdminDraftProductsPage: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Modal States
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
@@ -87,17 +86,6 @@ export const AdminDraftProductsPage: React.FC = () => {
     }
   };
 
-  const handleFormSubmit = (
-    data: Partial<Product> & { name: string; price: number },
-    isDraft = false
-  ) => {
-    if (editingProduct) {
-      return updateProduct(editingProduct.id, data, isDraft);
-    } else {
-      return addProduct(data, isDraft);
-    }
-  };
-
   return (
     <AdminLayout title="Draft Products">
       <div className="space-y-6">
@@ -122,10 +110,7 @@ export const AdminDraftProductsPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  setEditingProduct(null);
-                  setIsFormModalOpen(true);
-                }}
+                onClick={() => navigate('/admin/products/add')}
                 className="bg-purple-700 hover:bg-purple-800 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
@@ -263,10 +248,7 @@ export const AdminDraftProductsPage: React.FC = () => {
 
                             <button
                               type="button"
-                              onClick={() => {
-                                setEditingProduct(draft);
-                                setIsFormModalOpen(true);
-                              }}
+                              onClick={() => navigate(`/admin/products/${draft.id}/edit`)}
                               className="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 font-bold text-[11px] rounded-lg cursor-pointer flex items-center gap-1"
                               title="Edit & Publish Draft"
                             >
@@ -350,16 +332,6 @@ export const AdminDraftProductsPage: React.FC = () => {
         </div>
 
         {/* Modals */}
-        <ProductFormModal
-          isOpen={isFormModalOpen}
-          onClose={() => {
-            setIsFormModalOpen(false);
-            setEditingProduct(null);
-          }}
-          product={editingProduct}
-          onSubmit={handleFormSubmit}
-        />
-
         <ProductDetailsModal
           isOpen={isDetailsModalOpen}
           onClose={() => {
@@ -367,10 +339,7 @@ export const AdminDraftProductsPage: React.FC = () => {
             setViewingProduct(null);
           }}
           product={viewingProduct}
-          onEdit={(prod) => {
-            setEditingProduct(prod);
-            setIsFormModalOpen(true);
-          }}
+          onEdit={(prod) => navigate(`/admin/products/${prod.id}/edit`)}
         />
 
         <ConfirmModal

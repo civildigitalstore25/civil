@@ -1,16 +1,17 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import type { Product } from '../types/product';
 import { productService } from '../services/productService';
+import { productApi } from '../services/productApi';
 
 interface ProductContextType {
   products: Product[];
-  refreshProducts: () => void;
+  refreshProducts: () => Promise<void>;
   getProductBySlug: (slug: string) => Product | undefined;
   getProductById: (id: string) => Product | undefined;
-  addProduct: (data: Partial<Product> & { name: string; price: number }, isDraft?: boolean) => { success: boolean; product?: Product; error?: string };
-  updateProduct: (id: string, data: Partial<Product>, isDraft?: boolean) => { success: boolean; product?: Product; error?: string };
-  deleteProduct: (id: string) => { success: boolean; error?: string };
-  bulkDeleteProducts: (ids: string[]) => { success: boolean; count: number };
+  addProduct: (data: Partial<Product> & { name: string; price: number }, isDraft?: boolean) => Promise<{ success: boolean; product?: Product; error?: string }>;
+  updateProduct: (id: string, data: Partial<Product>, isDraft?: boolean) => Promise<{ success: boolean; product?: Product; error?: string }>;
+  deleteProduct: (id: string) => Promise<{ success: boolean; error?: string }>;
+  bulkDeleteProducts: (ids: string[]) => Promise<{ success: boolean; count: number }>;
   toggleBestSeller: (id: string) => void;
   toggleOutOfStock: (id: string) => void;
 }
@@ -20,9 +21,23 @@ const ProductContext = createContext<ProductContextType | undefined>(undefined);
 export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [products, setProducts] = useState<Product[]>(() => productService.getProducts());
 
-  const refreshProducts = useCallback(() => {
-    setProducts(productService.getProducts());
+  const replaceProducts = useCallback((next: Product[]) => {
+    productService.saveProducts(next);
+    setProducts(next);
   }, []);
+
+  const refreshProducts = useCallback(async () => {
+    try {
+      const next = await productApi.list();
+      replaceProducts(next);
+    } catch {
+      setProducts(productService.getProducts());
+    }
+  }, [replaceProducts]);
+
+  useEffect(() => {
+    void refreshProducts();
+  }, [refreshProducts]);
 
   const getProductBySlug = useCallback(
     (slug: string) => {
@@ -43,50 +58,91 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [products]
   );
 
-  const addProduct = useCallback((data: Partial<Product> & { name: string; price: number }, isDraft = false) => {
-    const result = productService.addProduct(data, isDraft);
-    if (result.success) {
-      setProducts(productService.getProducts());
+  const addProduct = useCallback(async (data: Partial<Product> & { name: string; price: number }, isDraft = false) => {
+    try {
+      const result = await productApi.create(data, isDraft);
+      if (result.success && result.product) {
+        setProducts((current) => {
+          const next = [result.product as Product, ...current];
+          productService.saveProducts(next);
+          return next;
+        });
+      }
+      return result;
+    } catch {
+      return productService.addProduct(data, isDraft);
     }
-    return result;
   }, []);
 
-  const updateProduct = useCallback((id: string, data: Partial<Product>, isDraft = false) => {
-    const result = productService.updateProduct(id, data, isDraft);
-    if (result.success) {
-      setProducts(productService.getProducts());
+  const updateProduct = useCallback(async (id: string, data: Partial<Product>, isDraft = false) => {
+    try {
+      const result = await productApi.update(id, data, isDraft);
+      if (result.success && result.product) {
+        setProducts((current) => {
+          const next = current.map((item) => (item.id === id || item._id === id ? (result.product as Product) : item));
+          productService.saveProducts(next);
+          return next;
+        });
+      }
+      return result;
+    } catch {
+      return productService.updateProduct(id, data, isDraft);
     }
-    return result;
   }, []);
 
-  const deleteProduct = useCallback((id: string) => {
-    const result = productService.deleteProduct(id);
-    if (result.success) {
-      setProducts(productService.getProducts());
+  const deleteProduct = useCallback(async (id: string) => {
+    try {
+      const result = await productApi.remove(id);
+      if (result.success) {
+        setProducts((current) => {
+          const next = current.filter((item) => item.id !== id && item._id !== id);
+          productService.saveProducts(next);
+          return next;
+        });
+      }
+      return result;
+    } catch {
+      return productService.deleteProduct(id);
     }
-    return result;
   }, []);
 
-  const bulkDeleteProducts = useCallback((ids: string[]) => {
-    const result = productService.bulkDeleteProducts(ids);
-    if (result.success) {
-      setProducts(productService.getProducts());
+  const bulkDeleteProducts = useCallback(async (ids: string[]) => {
+    try {
+      const result = await productApi.bulkRemove(ids);
+      if (result.success) {
+        setProducts((current) => {
+          const idSet = new Set(ids);
+          const next = current.filter((item) => !idSet.has(item.id) && !idSet.has(item._id || ''));
+          productService.saveProducts(next);
+          return next;
+        });
+      }
+      return result;
+    } catch {
+      return productService.bulkDeleteProducts(ids);
     }
-    return result;
   }, []);
 
   const toggleBestSeller = useCallback((id: string) => {
-    const result = productService.toggleBestSeller(id);
-    if (result.success) {
-      setProducts(productService.getProducts());
-    }
+    void productApi.toggle(id, 'bestseller').then((product) => {
+      if (!product) return;
+      setProducts((current) => {
+        const next = current.map((item) => (item.id === id || item._id === id ? product : item));
+        productService.saveProducts(next);
+        return next;
+      });
+    });
   }, []);
 
   const toggleOutOfStock = useCallback((id: string) => {
-    const result = productService.toggleOutOfStock(id);
-    if (result.success) {
-      setProducts(productService.getProducts());
-    }
+    void productApi.toggle(id, 'outofstock').then((product) => {
+      if (!product) return;
+      setProducts((current) => {
+        const next = current.map((item) => (item.id === id || item._id === id ? product : item));
+        productService.saveProducts(next);
+        return next;
+      });
+    });
   }, []);
 
   const contextValue = useMemo(

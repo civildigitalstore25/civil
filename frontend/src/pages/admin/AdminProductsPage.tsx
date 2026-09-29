@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import {
   Plus,
@@ -16,16 +17,14 @@ import {
 } from 'lucide-react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import ConfirmModal from '../../components/admin/ConfirmModal';
-import { ProductFormModal } from '../../components/admin/ProductFormModal';
 import { ProductDetailsModal } from '../../components/admin/ProductDetailsModal';
 import { useProducts } from '../../context/ProductContext';
 import type { Product } from '../../types/product';
 
 export const AdminProductsPage: React.FC = () => {
+  const navigate = useNavigate();
   const {
     products,
-    addProduct,
-    updateProduct,
     deleteProduct,
     bulkDeleteProducts,
     toggleBestSeller,
@@ -46,10 +45,6 @@ export const AdminProductsPage: React.FC = () => {
 
   // Selection & Bulk Actions
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
-
-  // Modals
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
@@ -234,18 +229,6 @@ export const AdminProductsPage: React.FC = () => {
     downloadAnchor.remove();
   };
 
-  // Form Submit Handler
-  const handleFormSubmit = (
-    data: Partial<Product> & { name: string; price: number },
-    isDraft = false
-  ) => {
-    if (editingProduct) {
-      return updateProduct(editingProduct.id, data, isDraft);
-    } else {
-      return addProduct(data, isDraft);
-    }
-  };
-
   return (
     <AdminLayout title="Product Management">
       <div className="space-y-6">
@@ -291,10 +274,7 @@ export const AdminProductsPage: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => {
-                  setEditingProduct(null);
-                  setIsFormModalOpen(true);
-                }}
+                onClick={() => navigate('/admin/products/add')}
                 className="bg-[#F5A000] hover:bg-amber-600 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer shrink-0"
               >
                 <Plus className="w-4 h-4" />
@@ -632,10 +612,7 @@ export const AdminProductsPage: React.FC = () => {
                             {/* Edit */}
                             <button
                               type="button"
-                              onClick={() => {
-                                setEditingProduct(product);
-                                setIsFormModalOpen(true);
-                              }}
+                              onClick={() => navigate(`/admin/products/${product.id}/edit`)}
                               className="p-1.5 bg-amber-50 hover:bg-amber-100 text-[#F5A000] rounded-lg transition-colors cursor-pointer"
                               title="Edit Product"
                               aria-label={`Edit ${product.name}`}
@@ -724,16 +701,6 @@ export const AdminProductsPage: React.FC = () => {
         </div>
 
         {/* Modals */}
-        <ProductFormModal
-          isOpen={isFormModalOpen}
-          onClose={() => {
-            setIsFormModalOpen(false);
-            setEditingProduct(null);
-          }}
-          product={editingProduct}
-          onSubmit={handleFormSubmit}
-        />
-
         <ProductDetailsModal
           isOpen={isDetailsModalOpen}
           onClose={() => {
@@ -741,10 +708,7 @@ export const AdminProductsPage: React.FC = () => {
             setViewingProduct(null);
           }}
           product={viewingProduct}
-          onEdit={(prod) => {
-            setEditingProduct(prod);
-            setIsFormModalOpen(true);
-          }}
+          onEdit={(prod) => navigate(`/admin/products/${prod.id}/edit`)}
         />
 
         <ConfirmModal
