@@ -12,13 +12,13 @@ export const CustomerReviewsSection: React.FC<CustomerReviewsSectionProps> = ({
   rating,
   reviewCount
 }) => {
-  const ratingDistribution = [
-    { stars: 5, percentage: 72 },
-    { stars: 4, percentage: 18 },
-    { stars: 3, percentage: 7 },
-    { stars: 2, percentage: 1 },
-    { stars: 1, percentage: 2 }
-  ];
+  const ratingDistribution = [5, 4, 3, 2, 1].map((stars) => ({
+    stars,
+    percentage: reviews.length
+      ? Math.round((reviews.filter((review) => review.rating === stars).length / reviews.length) * 100)
+      : 0,
+  }));
+  const filledStars = Math.max(0, Math.min(5, Math.round(rating)));
 
   return (
     <div className="space-y-8">
@@ -27,7 +27,7 @@ export const CustomerReviewsSection: React.FC<CustomerReviewsSectionProps> = ({
         {/* Left Rating Box (4 cols) */}
         <div className="md:col-span-4 flex flex-col items-center justify-center text-center p-4 border-b md:border-b-0 md:border-r border-slate-200">
           <span className="text-5xl font-black text-slate-900">{rating}</span>
-          <div className="flex text-amber-500 text-xl my-2">★★★★★</div>
+          <div className="flex text-amber-500 text-xl my-2">{'★'.repeat(filledStars)}{'☆'.repeat(5 - filledStars)}</div>
           <span className="text-xs text-slate-500 font-semibold">Based on {reviewCount} customer reviews</span>
         </div>
 
@@ -52,8 +52,8 @@ export const CustomerReviewsSection: React.FC<CustomerReviewsSectionProps> = ({
 
       {/* Individual Review Items */}
       <div className="space-y-4">
-        <h4 className="text-base font-bold text-slate-900 mb-4">Customer Feedback ({reviews.length})</h4>
-        {reviews.map((rev) => (
+        {reviews.length > 0 && <h4 className="text-base font-bold text-slate-900 mb-4">Customer Feedback ({reviews.length})</h4>}
+        {reviews.filter((rev) => rev.comment?.trim()).map((rev) => (
           <div
             key={rev.id}
             className="p-4 sm:p-5 rounded-xl bg-slate-50 border border-slate-200 space-y-3"

@@ -23,7 +23,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, title = 'Das
         )}
 
         {/* Sidebar Navigation */}
-        <div className="fixed inset-y-0 left-0 z-40 lg:static lg:block">
+        <div className={mobileOpen ? 'fixed inset-y-0 left-0 z-40 lg:static' : 'hidden lg:block lg:static'}>
           <AdminSidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
         </div>
 

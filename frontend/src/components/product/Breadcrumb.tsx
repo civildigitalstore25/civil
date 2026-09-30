@@ -26,7 +26,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
   };
 
   return (
-    <nav className="w-full bg-slate-100 border-b border-slate-200 py-3 px-4 md:px-8 text-xs text-slate-500">
+    <nav className="w-full bg-slate-100 border-b border-slate-200 py-3 px-4 md:px-8 text-sm text-slate-500">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 font-medium">
         {/* Left: Breadcrumb Trail */}
         <div className="flex items-center gap-2 flex-wrap">

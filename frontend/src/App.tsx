@@ -18,9 +18,11 @@ import AdminRoute from './components/auth/AdminRoute';
 
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminProductsPage from './pages/admin/AdminProductsPage';
+import AdminDraftProductsPage from './pages/admin/AdminDraftProductsPage';
 import AddProductPage from './pages/admin/AddProductPage';
 import EditProductPage from './pages/admin/EditProductPage';
 import AdminCategoriesPage from './pages/admin/AdminCategoriesPage';
+import AdminBrandsPage from './pages/admin/AdminBrandsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 import AdminProfilePage from './pages/admin/AdminProfilePage';
@@ -93,6 +95,14 @@ function App() {
                   }
                 />
                 <Route
+                  path="/admin/products/drafts"
+                  element={
+                    <AdminRoute>
+                      <AdminDraftProductsPage />
+                    </AdminRoute>
+                  }
+                />
+                <Route
                   path="/admin/products/add"
                   element={
                     <AdminRoute>
@@ -105,6 +115,14 @@ function App() {
                   element={
                     <AdminRoute>
                       <EditProductPage />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/brands"
+                  element={
+                    <AdminRoute>
+                      <AdminBrandsPage />
                     </AdminRoute>
                   }
                 />
