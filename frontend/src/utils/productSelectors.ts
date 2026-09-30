@@ -8,7 +8,7 @@ import type { CategoryDefinition } from '../data/categories';
  */
 export const getBestSellerProducts = (products: Product[]): Product[] => {
   return products
-    .filter((p) => (p.isBestSeller === true || p.badge === 'Bestseller') && p.status !== 'inactive')
+    .filter((p) => (p.isBestSeller === true || p.badge === 'Bestseller') && p.status !== 'inactive' && p.status !== 'draft')
     .sort((a, b) => {
       if (b.rating !== a.rating) {
         return b.rating - a.rating;
@@ -24,7 +24,7 @@ export const getBestSellerProducts = (products: Product[]): Product[] => {
  */
 export const getNewArrivalProducts = (products: Product[]): Product[] => {
   return products
-    .filter((p) => (p.isNewArrival === true || p.badge === 'New') && p.status !== 'inactive')
+    .filter((p) => (p.isNewArrival === true || p.badge === 'New') && p.status !== 'inactive' && p.status !== 'draft')
     .sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -42,7 +42,7 @@ export const getCategoryProducts = (
   category: CategoryDefinition,
   limit: number = 4
 ): Product[] => {
-  const activeProducts = products.filter((p) => p.status !== 'inactive');
+  const activeProducts = products.filter((p) => p.status !== 'inactive' && p.status !== 'draft');
 
   const filtered = activeProducts.filter((p) => {
     // Match by slug or category/software matching filterValue
@@ -86,7 +86,7 @@ export const getCategoryProductCount = (
   products: Product[],
   category: CategoryDefinition
 ): number => {
-  const activeProducts = products.filter((p) => p.status !== 'inactive');
+  const activeProducts = products.filter((p) => p.status !== 'inactive' && p.status !== 'draft');
 
   return activeProducts.filter((p) => {
     if (p.categorySlug && p.categorySlug.toLowerCase() === category.slug.toLowerCase()) {

@@ -9,6 +9,7 @@ import ProductGallery from '../components/product/ProductGallery';
 import ProductInfoSection from '../components/product/ProductInfoSection';
 import ProductTabs from '../components/product/ProductTabs';
 import RelatedProductsSection from '../components/product/RelatedProductsSection';
+import ProductMediaSections from '../components/product/ProductMediaSections';
 import WhatsAppButton from '../components/common/WhatsAppButton';
 import { useProducts } from '../context/ProductContext';
 import type { Product } from '../types/product';
@@ -23,19 +24,7 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ product:
   const { products, getProductBySlug } = useProducts();
   const searchSlug = slug || id || '';
 
-  // Find product by prop, slug, or fallback to first product
-  const product =
-    propProduct ||
-    (searchSlug ? getProductBySlug(searchSlug) : undefined) ||
-    products[0];
-
-  const handleBack = () => {
-    if (window.history.length > 2) {
-      navigate(-1);
-    } else {
-      navigate('/products');
-    }
-  };
+  const product = propProduct || (searchSlug ? getProductBySlug(searchSlug) : undefined);
 
   if (!product) {
     return (
@@ -79,30 +68,12 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ product:
       />
 
       {/* Main Content Area */}
-      <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 md:py-10 space-y-8">
-        {/* Back Button Bar */}
-        <div className="flex items-center justify-between border-b border-slate-200/80 pb-4">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-amber-50 border border-slate-200 hover:border-amber-300 text-slate-700 hover:text-amber-900 rounded-xl text-xs font-bold shadow-2xs transition-all duration-200 cursor-pointer group"
-          >
-            <svg
-              className="w-4 h-4 stroke-current transform group-hover:-translate-x-1 transition-transform"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            <span>Back to Products</span>
-          </button>
-        </div>
-
+      <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-8">
         {/* Product Top Grid: Gallery (Left) | Product Info (Right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
           {/* Left: Product Image Gallery (6 cols lg) */}
           <div className="lg:col-span-6 w-full">
-            <ProductGallery images={product.images} title={product.name} />
+            <ProductGallery images={product.images} title={product.name} videoUrl={product.videoUrl} />
           </div>
 
           {/* Right: Product Information (6 cols lg) */}
@@ -112,6 +83,7 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ product:
         </div>
 
         {/* Product Information Tabs */}
+        <ProductMediaSections product={product} />
         <ProductTabs product={product} />
 
         {/* Related Products */}

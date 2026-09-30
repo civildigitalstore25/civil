@@ -84,7 +84,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({ category
   // Filter & Sort Logic using dynamic products array
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
-      if (product.status === 'inactive') return false;
+      if (product.status === 'inactive' || product.status === 'draft') return false;
 
       // Handle URL Filter parameter (?filter=best-seller or ?filter=new-arrivals)
       if (filterParam === 'best-seller' || filterParam === 'best-sellers') {

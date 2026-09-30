@@ -1,34 +1,69 @@
 import React, { useState } from 'react';
+import { Check, ChevronDown, Monitor } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import type { Product } from '../../types/product';
 import CustomerReviewsSection from './CustomerReviewsSection';
+import ProductRichContent from './ProductRichContent';
+import {
+  displayText,
+  filledFaqs,
+  filledFeatures,
+  filledRequirements,
+  includedFileList,
+  plainText,
+  reviewStats,
+} from '../../utils/productDisplay';
 
 interface ProductTabsProps {
   product: Product;
 }
 
-export const ProductTabs: React.FC<ProductTabsProps> = ({ product }) => {
-  const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'compatibility' | 'reviews'>('description');
+type TabId = 'details' | 'features' | 'requirements' | 'reviews' | 'faq';
 
-  const tabs = [
-    { id: 'description', label: 'Description' },
-    { id: 'specifications', label: 'File Specifications' },
-    { id: 'compatibility', label: 'Compatibility & Requirements' },
-    { id: 'reviews', label: `Customer Reviews (${product.reviewCount})` }
-  ] as const;
+const PanelIntro = ({ title, text }: { title: string; text: string }) => (
+  <div className="mb-5">
+    <h2 className="text-lg font-bold text-slate-900">{title}</h2>
+    <p className="mt-0.5 text-sm text-slate-500">{text}</p>
+  </div>
+);
+
+const FeatureIcon = ({ name }: { name?: string }) => {
+  const Icon = (LucideIcons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[name || ''] || Check;
+  return <Icon className="h-5 w-5" />;
+};
+
+export const ProductTabs: React.FC<ProductTabsProps> = ({ product }) => {
+  const features = filledFeatures(product);
+  const requirements = filledRequirements(product);
+  const faqs = filledFaqs(product);
+  const files = includedFileList(product);
+  const reviews = reviewStats(product);
+  const overviewHtml = plainText(product.longDescription) ? product.longDescription || '' : '';
+  const detailsHtml = plainText(product.detailsDescription) ? product.detailsDescription || '' : '';
+  const reviewCount = reviews?.count || 0;
+
+  const tabs: { id: TabId; label: string }[] = [];
+  if (overviewHtml || detailsHtml || files.length) tabs.push({ id: 'details', label: 'Product Details' });
+  if (features.length) tabs.push({ id: 'features', label: 'Features' });
+  if (requirements.length) tabs.push({ id: 'requirements', label: 'System' });
+  tabs.push({ id: 'reviews', label: `Reviews (${reviewCount})` });
+  tabs.push({ id: 'faq', label: 'FAQ' });
+
+  const [activeTab, setActiveTab] = useState<TabId>(tabs[0]?.id || 'reviews');
+  const [openFaq, setOpenFaq] = useState(0);
+  const current = tabs.some((tab) => tab.id === activeTab) ? activeTab : tabs[0]?.id;
+  if (!tabs.length || !current) return null;
 
   return (
-    <div className="w-full bg-white border border-slate-200 rounded-2xl p-4 sm:p-8 shadow-sm">
-      {/* Horizontal Tabs Header */}
-      <div className="flex border-b border-slate-200 overflow-x-auto no-scrollbar gap-2 sm:gap-6 mb-6 pb-1">
+    <section className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex gap-1 overflow-x-auto border-b border-slate-200 px-3 sm:px-6">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`py-3 px-4 font-bold text-xs sm:text-sm whitespace-nowrap border-b-2 transition-all cursor-pointer ${
-              activeTab === tab.id
-                ? 'border-[#F5A623] text-[#F5A623]'
-                : 'border-transparent text-slate-500 hover:text-slate-900'
+            className={`whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition-colors ${
+              current === tab.id ? 'border-[#F5A623] text-[#D97706]' : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
             {tab.label}
@@ -36,107 +71,90 @@ export const ProductTabs: React.FC<ProductTabsProps> = ({ product }) => {
         ))}
       </div>
 
-      {/* Tab Content */}
-      <div className="text-slate-700 text-sm leading-relaxed">
-        {/* Description Tab */}
-        {activeTab === 'description' && (
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <h3 className="text-lg font-bold text-slate-900">Product Overview</h3>
-              {product.description.map((p, idx) => (
-                <p key={idx}>{p}</p>
-              ))}
-            </div>
-
-            {product.includedFiles && product.includedFiles.length > 0 && (
-              <div className="space-y-3 pt-4 border-t border-slate-200">
-                <h4 className="text-base font-bold text-[#D97706]">What's Included in This Bundle:</h4>
-                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {product.includedFiles.map((file, idx) => (
-                    <li key={idx} className="flex items-center gap-2 text-slate-800 bg-slate-50 p-2.5 rounded-xl border border-slate-200 font-medium">
-                      <span className="text-emerald-600 font-bold">✓</span>
-                      <span>{file}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+      <div className="p-4 sm:p-5">
+        {current === 'details' && (
+          <div className="space-y-4">
+            <PanelIntro title="Product Details" text={`Full details for ${product.name}.`} />
+            {overviewHtml && <ProductRichContent html={overviewHtml} />}
+            {detailsHtml && <ProductRichContent html={detailsHtml} />}
+            {files.length > 0 && (
+              <ul className="grid gap-2 sm:grid-cols-2">
+                {files.map((file) => (
+                  <li key={file} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-800">{file}</li>
+                ))}
+              </ul>
             )}
           </div>
         )}
 
-        {/* Specifications Tab */}
-        {activeTab === 'specifications' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex justify-between items-center">
-              <span className="text-slate-500 font-semibold">File Format:</span>
-              <span className="text-slate-900 font-bold">{product.specifications.format}</span>
-            </div>
-            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex justify-between items-center">
-              <span className="text-slate-500 font-semibold">File Size:</span>
-              <span className="text-slate-900 font-bold">{product.specifications.fileSize}</span>
-            </div>
-            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex justify-between items-center">
-              <span className="text-slate-500 font-semibold">Software:</span>
-              <span className="text-slate-900 font-bold">{product.specifications.software}</span>
-            </div>
-            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex justify-between items-center">
-              <span className="text-slate-500 font-semibold">Version:</span>
-              <span className="text-slate-900 font-bold">{product.specifications.version}</span>
-            </div>
-            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex justify-between items-center">
-              <span className="text-slate-500 font-semibold">Compatibility:</span>
-              <span className="text-slate-900 font-bold">{product.specifications.compatibility}</span>
-            </div>
-            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex justify-between items-center">
-              <span className="text-slate-500 font-semibold">Delivery Method:</span>
-              <span className="text-emerald-700 font-bold">{product.specifications.delivery}</span>
-            </div>
-            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex justify-between items-center">
-              <span className="text-slate-500 font-semibold">Access Duration:</span>
-              <span className="text-[#D97706] font-bold">{product.specifications.access}</span>
+        {current === 'features' && (
+          <div>
+            <PanelIntro title="Key features" text={`Capabilities included with ${product.name}.`} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              {features.map((feature) => (
+                <article key={`${feature.title}-${feature.description}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                  <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                    <FeatureIcon name={feature.icon} />
+                  </span>
+                  {displayText(feature.title) && <h3 className="text-sm font-bold text-slate-900">{feature.title}</h3>}
+                  {displayText(feature.description) && <p className="mt-0.5 text-sm leading-relaxed text-slate-600">{feature.description}</p>}
+                </article>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Compatibility Tab */}
-        {activeTab === 'compatibility' && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-slate-900">Software & System Requirements</h3>
-            <div className="border border-slate-200 rounded-xl overflow-hidden">
-              <table className="w-full text-left text-xs sm:text-sm">
-                <tbody>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <td className="p-3.5 font-bold text-slate-500 w-1/3">Supported Software</td>
-                    <td className="p-3.5 font-semibold text-slate-900">{product.compatibility.supportedSoftware}</td>
-                  </tr>
-                  <tr className="border-b border-slate-200">
-                    <td className="p-3.5 font-bold text-slate-500">Compatible Versions</td>
-                    <td className="p-3.5 font-semibold text-slate-900">{product.compatibility.compatibleVersions}</td>
-                  </tr>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <td className="p-3.5 font-bold text-slate-500">Operating System</td>
-                    <td className="p-3.5 font-semibold text-slate-900">{product.compatibility.os}</td>
-                  </tr>
-                  <tr className="border-b border-slate-200">
-                    <td className="p-3.5 font-bold text-slate-500">File Extensions</td>
-                    <td className="p-3.5 font-semibold text-slate-900">{product.compatibility.fileTypes}</td>
-                  </tr>
-                  <tr className="bg-slate-50">
-                    <td className="p-3.5 font-bold text-slate-500">Hardware Requirements</td>
-                    <td className="p-3.5 font-semibold text-slate-900">{product.compatibility.requirements}</td>
-                  </tr>
-                </tbody>
-              </table>
+        {current === 'requirements' && (
+          <div>
+            <PanelIntro title="System" text={`What you need to use ${product.name}.`} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              {requirements.map((item) => (
+                <article key={`${item.title}-${item.description}`} className="rounded-xl border border-slate-200 p-3.5">
+                  <div className="mb-1 flex items-center gap-2 text-sky-700">
+                    <Monitor className="h-4 w-4" />
+                    {displayText(item.title) && <h3 className="text-sm font-bold text-slate-900">{item.title}</h3>}
+                  </div>
+                  {displayText(item.description) && <p className="text-sm leading-relaxed text-slate-600">{item.description}</p>}
+                </article>
+              ))}
             </div>
           </div>
         )}
 
-        {/* Reviews Tab */}
-        {activeTab === 'reviews' && (
-          <CustomerReviewsSection reviews={product.reviews} rating={product.rating} reviewCount={product.reviewCount} />
+        {current === 'faq' && (
+          <div>
+            <PanelIntro title="FAQ" text={`Answers about ${product.name}.`} />
+            {!faqs.length && <p className="text-sm text-slate-500">No questions have been added for this product.</p>}
+            <div className="space-y-2">
+              {faqs.map((faq, index) => {
+                const open = openFaq === index;
+                return (
+                  <article key={faq.question} className={`overflow-hidden rounded-2xl border ${open ? 'border-amber-300' : 'border-slate-200'}`}>
+                    <button type="button" onClick={() => setOpenFaq(open ? -1 : index)} className="flex w-full items-center gap-2.5 px-3 py-2.5 text-left">
+                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${open ? 'bg-[#F5A623] text-white' : 'bg-slate-100 text-slate-500'}`}>{index + 1}</span>
+                      <span className="flex-1 text-sm font-semibold text-slate-900">{faq.question}</span>
+                      <ChevronDown className={`h-5 w-5 text-amber-600 transition ${open ? 'rotate-180' : ''}`} />
+                    </button>
+                    {open && displayText(faq.answer) && (
+                      <p className="border-t border-amber-100 px-3 py-2.5 pl-12 text-sm leading-relaxed text-slate-600">{faq.answer}</p>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {current === 'reviews' && (
+          <div>
+            <PanelIntro title={`Reviews (${reviewCount})`} text={reviewCount ? `What buyers say about ${product.name}.` : 'No reviews yet.'} />
+            {reviewCount > 0 && reviews && (
+              <CustomerReviewsSection reviews={product.reviews || []} rating={reviews.rating} reviewCount={reviews.count} />
+            )}
+          </div>
         )}
       </div>
-    </div>
+    </section>
   );
 };
 
