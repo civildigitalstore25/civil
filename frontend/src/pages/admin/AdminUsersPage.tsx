@@ -1,21 +1,26 @@
 import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import AdminLayout from '../../components/admin/AdminLayout';
+import AdminPageToolbar from '../../components/admin/AdminPageToolbar';
 import ConfirmModal from '../../components/admin/ConfirmModal';
 import { useAuth } from '../../hooks/useAuth';
 import type { User, UserRole } from '../../types/user';
+import { downloadExcel, downloadJson, exportDateStamp } from '../../utils/adminExport';
 
 interface AdminUsersPageProps {
   defaultTab?: 'users' | 'admins' | 'all';
 }
 
 const MENU_OPTIONS = [
-  { key: 'dashboard', label: 'Dashboard', icon: '🖥️' },
-  { key: 'products', label: 'Products', icon: '📦' },
-  { key: 'categories', label: 'Categories', icon: '📂' },
-  { key: 'orders', label: 'Orders', icon: '🛒' },
-  { key: 'users', label: 'User Management', icon: '👤' },
-  { key: 'admins', label: 'Admin Management', icon: '🛡️' },
-  { key: 'profile', label: 'Profile Settings', icon: '⚙️' },
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'products', label: 'Products' },
+  { key: 'draft-products', label: 'Draft Products' },
+  { key: 'banners', label: 'Homepage Banners' },
+  { key: 'categories', label: 'Brands & Categories' },
+  { key: 'orders', label: 'Orders' },
+  { key: 'users', label: 'User Management' },
+  { key: 'admins', label: 'Admin Management' },
+  { key: 'profile', label: 'Profile Settings' },
 ];
 
 export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ defaultTab = 'users' }) => {
@@ -23,6 +28,7 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ defaultTab = 'us
 
   const [activeTab, setActiveTab] = useState<'users' | 'admins' | 'all'>(defaultTab);
   const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('All');
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   // Permission Modal state
@@ -34,6 +40,7 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ defaultTab = 'us
 
   useEffect(() => {
     setActiveTab(defaultTab);
+    setRoleFilter('All');
   }, [defaultTab]);
 
   const isAdminView = activeTab === 'admins';
@@ -45,6 +52,8 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ defaultTab = 'us
     } else {
       if (u.role !== 'user') return false;
     }
+
+    if (roleFilter !== 'All' && u.role !== roleFilter) return false;
 
     // Search query filter
     const query = searchQuery.toLowerCase().trim();
@@ -114,73 +123,84 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ defaultTab = 'us
       case 'superadmin':
         return (
           <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border bg-purple-50 text-purple-900 border-purple-300 shadow-2xs">
-            ⚡ SUPERADMIN
+            Super Admin
           </span>
         );
       case 'admin':
         return (
           <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border bg-amber-50 text-amber-800 border-amber-300">
-            🛡️ ADMIN
+            Admin
           </span>
         );
       default:
         return (
           <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full border bg-slate-100 text-slate-700 border-slate-200">
-            👤 USER
+            User
           </span>
         );
     }
   };
 
-  const pageTitle = isAdminView ? 'Admin Management' : 'User Management';
+  const pageTitle = isAdminView ? 'Admin accounts' : 'Users';
+  const userExportRows = filteredUsers.map((user) => ({
+    Name: user.name,
+    Email: user.email,
+    Phone: user.phone || '',
+    Role: user.role,
+    Permissions: user.permissions?.join(', ') || '',
+    Joined: user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN') : '',
+  }));
 
   return (
     <AdminLayout title={pageTitle}>
-      {/* Top Header Card */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-              <span>{pageTitle}</span>
-              <span className="text-xs px-2.5 py-0.5 bg-slate-100 text-slate-700 rounded-full font-bold">
-                {filteredUsers.length} {isAdminView ? 'Admin Accounts' : 'Registered Users'}
-              </span>
-            </h2>
-            <p className="text-xs text-slate-500">
-              {isAdminView
-                ? 'Manage administrator accounts, Superadmin credentials & left menu permissions.'
-                : 'View customer accounts, user Gmail addresses & manage permissions.'}
-            </p>
-          </div>
+      <AdminPageToolbar
+        title={pageTitle}
+        description={isAdminView ? 'Search administrators and export the current list.' : 'Search customers and export the current list.'}
+        count={filteredUsers.length}
+        countLabel={isAdminView ? 'admins' : 'users'}
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search name, email, or phone"
+        filters={[
+          {
+            id: 'role',
+            ariaLabel: 'Filter by role',
+            value: roleFilter,
+            onChange: setRoleFilter,
+            options: isAdminView
+              ? [
+                  { value: 'All', label: 'All roles' },
+                  { value: 'admin', label: 'Admin' },
+                  { value: 'superadmin', label: 'Super admin' },
+                ]
+              : [
+                  { value: 'All', label: 'All roles' },
+                  { value: 'user', label: 'User' },
+                ],
+          },
+        ]}
+        onClear={() => {
+          setSearchQuery('');
+          setRoleFilter('All');
+        }}
+        onExportExcel={() => downloadExcel(userExportRows, isAdminView ? 'Admins' : 'Users', `${isAdminView ? 'admins' : 'users'}_${exportDateStamp()}`)}
+        onExportJson={() => downloadJson(userExportRows, `${isAdminView ? 'admins' : 'users'}_${exportDateStamp()}`)}
+      />
 
-          <div className="w-full sm:w-72">
-            <input
-              type="text"
-              placeholder={isAdminView ? "Search Admin Gmail, name..." : "Search User Gmail, name..."}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F5A000]/30"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Action Error Notice */}
       {actionError && (
-        <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl flex items-center justify-between">
-          <span>⚠️ {actionError}</span>
-          <button onClick={() => setActionError(null)} className="text-rose-800 font-extrabold px-2 cursor-pointer">
-            ✕
+        <div className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs font-bold text-rose-700">
+          <span>{actionError}</span>
+          <button type="button" onClick={() => setActionError(null)} className="cursor-pointer p-1 text-rose-800" aria-label="Dismiss">
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
 
-      {/* Action Success Notice */}
       {actionSuccess && (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-xl flex items-center justify-between">
-          <span>✅ {actionSuccess}</span>
-          <button onClick={() => setActionSuccess(null)} className="text-emerald-800 font-extrabold px-2 cursor-pointer">
-            ✕
+        <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs font-bold text-emerald-800">
+          <span>{actionSuccess}</span>
+          <button type="button" onClick={() => setActionSuccess(null)} className="cursor-pointer p-1 text-emerald-800" aria-label="Dismiss">
+            <X className="h-4 w-4" />
           </button>
         </div>
       )}
@@ -244,12 +264,9 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ defaultTab = 'us
 
                       {/* Gmail / Email Address Badge */}
                       <td className="py-3 px-4 font-semibold">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-amber-500 font-bold">✉️</span>
-                          <span className="font-mono text-xs text-slate-900 bg-slate-100 px-2 py-1 rounded-md border border-slate-200/80">
-                            {user.email}
-                          </span>
-                        </div>
+                        <span className="font-mono text-xs text-slate-900 bg-slate-100 px-2 py-1 rounded-md border border-slate-200/80">
+                          {user.email}
+                        </span>
                       </td>
 
                       {/* Role Badge */}
@@ -261,7 +278,7 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ defaultTab = 'us
                           <div className="flex flex-wrap gap-1">
                             {isUserSuperAdmin ? (
                               <span className="text-[10px] font-extrabold text-purple-900 bg-purple-100 px-2 py-0.5 rounded-md">
-                                ⚡ Full Access (All Menus)
+                                Full access
                               </span>
                             ) : (
                               perms.map((p) => (
@@ -298,7 +315,7 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ defaultTab = 'us
                               onClick={() => handleOpenPermissionsModal(user)}
                               className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-extrabold text-[11px] rounded-lg transition-colors cursor-pointer flex items-center gap-1"
                             >
-                              <span>🔑 Menu Access</span>
+                              Menu access
                             </button>
                           )}
 
@@ -361,7 +378,7 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ defaultTab = 'us
             <div className="flex items-start justify-between border-b border-slate-100 pb-4">
               <div>
                 <h3 className="text-lg font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                  <span>🔑 Menu Access Permissions</span>
+                  Menu access
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">
                   Choose which left sidebar menu items are accessible to{' '}
@@ -370,9 +387,10 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ defaultTab = 'us
               </div>
               <button
                 onClick={() => setUserForPermissions(null)}
-                className="text-slate-400 hover:text-slate-700 font-bold text-lg p-1"
+                className="text-slate-400 hover:text-slate-700 p-1"
+                aria-label="Close"
               >
-                ✕
+                <X className="h-4 w-4" />
               </button>
             </div>
 
@@ -420,10 +438,7 @@ export const AdminUsersPage: React.FC<AdminUsersPageProps> = ({ defaultTab = 'us
                       onChange={() => {}}
                       className="w-4 h-4 rounded text-[#F5A000] focus:ring-[#F5A000]/20 accent-[#F5A000] cursor-pointer"
                     />
-                    <div className="flex items-center gap-2 text-xs">
-                      <span>{option.icon}</span>
-                      <span>{option.label}</span>
-                    </div>
+                    <span className="text-xs">{option.label}</span>
                   </label>
                 );
               })}

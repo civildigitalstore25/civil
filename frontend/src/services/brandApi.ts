@@ -26,19 +26,19 @@ export const brandApi = {
     return data.brands;
   },
 
-  async create(name: string): Promise<BrandRecord> {
+  async create(name: string, slug: string): Promise<BrandRecord> {
     const { response, data } = await apiRequest<BrandResponse>('/brands', {
       method: 'POST',
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, slug }),
     });
     if (!response.ok || !data.brand) throw new Error(data.message || 'Failed to add brand');
     return data.brand;
   },
 
-  async addCategory(brandId: string, name: string): Promise<BrandRecord> {
+  async addCategory(brandId: string, name: string, slug: string): Promise<BrandRecord> {
     const { response, data } = await apiRequest<BrandResponse>(`/brands/${brandId}/categories`, {
       method: 'POST',
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, slug }),
     });
     if (!response.ok || !data.brand) throw new Error(data.message || 'Failed to add category');
     return data.brand;

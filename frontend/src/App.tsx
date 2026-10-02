@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import ProductListingPage from './pages/ProductListingPage';
 import CartPage from './pages/CartPage';
@@ -22,8 +22,8 @@ import AdminProductsPage from './pages/admin/AdminProductsPage';
 import AdminDraftProductsPage from './pages/admin/AdminDraftProductsPage';
 import AddProductPage from './pages/admin/AddProductPage';
 import EditProductPage from './pages/admin/EditProductPage';
-import AdminCategoriesPage from './pages/admin/AdminCategoriesPage';
-import AdminBrandsPage from './pages/admin/AdminBrandsPage';
+import AdminCatalogPage from './pages/admin/AdminCatalogPage';
+import AdminBannersPage from './pages/admin/AdminBannersPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 import AdminProfilePage from './pages/admin/AdminProfilePage';
@@ -134,21 +134,23 @@ function App() {
                   }
                 />
                 <Route
-                  path="/admin/brands"
+                  path="/admin/banners"
                   element={
                     <AdminRoute>
-                      <AdminBrandsPage />
+                      <AdminBannersPage />
                     </AdminRoute>
                   }
                 />
                 <Route
-                  path="/admin/categories"
+                  path="/admin/catalog"
                   element={
                     <AdminRoute>
-                      <AdminCategoriesPage />
+                      <AdminCatalogPage />
                     </AdminRoute>
                   }
                 />
+                <Route path="/admin/brands" element={<Navigate to="/admin/catalog" replace />} />
+                <Route path="/admin/categories" element={<Navigate to="/admin/catalog" replace />} />
                 <Route
                   path="/admin/users"
                   element={

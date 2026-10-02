@@ -1,11 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import * as XLSX from 'xlsx';
 import {
   Plus,
-  Search,
-  FileSpreadsheet,
-  FileCode,
   Trash2,
   Edit,
   Eye,
@@ -13,9 +9,10 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
-  RotateCcw
 } from 'lucide-react';
 import AdminLayout from '../../components/admin/AdminLayout';
+import AdminPageToolbar, { adminButtonClass } from '../../components/admin/AdminPageToolbar';
+import { downloadExcel, downloadJson, exportDateStamp } from '../../utils/adminExport';
 import ConfirmModal from '../../components/admin/ConfirmModal';
 import { ProductDetailsModal } from '../../components/admin/ProductDetailsModal';
 import { useProducts } from '../../context/ProductContext';
@@ -207,163 +204,78 @@ export const AdminProductsPage: React.FC = () => {
       CreatedAt: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : ''
     }));
 
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Products');
-    XLSX.writeFile(workbook, `products_catalog_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    downloadExcel(exportData, 'Products', `products_${exportDateStamp()}`);
   };
 
-  // Export to JSON
   const handleExportJSON = () => {
     const exportData =
       selectedProductIds.length > 0
         ? products.filter((p) => selectedProductIds.includes(p.id))
         : filteredProducts;
 
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportData, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `products_catalog_${new Date().toISOString().slice(0, 10)}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+    downloadJson(exportData, `products_${exportDateStamp()}`);
   };
 
   return (
     <AdminLayout title="Product Management">
       <div className="space-y-6">
 
-        {/* Header Bar */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-                  Products Management
-                </h2>
-                <span className="px-2.5 py-0.5 bg-amber-100 text-[#F5A000] font-extrabold text-xs rounded-full">
-                  {filteredProducts.length} items
-                </span>
-              </div>
-              <p className="text-xs text-slate-500">
-                Manage civil engineering CAD files, software bundles, subscription plans & digital downloads
-              </p>
-            </div>
-
-            {/* Header Actions */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={handleExportExcel}
-                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                title="Export products list to Excel (.xlsx)"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                <span>Export Excel</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleExportJSON}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                title="Export products list to JSON (.json)"
-              >
-                <FileCode className="w-4 h-4 text-slate-600" />
-                <span>Export JSON</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate('/admin/products/add')}
-                className="bg-[#F5A000] hover:bg-amber-600 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer shrink-0"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Product</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Filter Controls Bar */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2 border-t border-slate-100 items-center">
-            {/* Search Input */}
-            <div className="relative lg:col-span-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+        <AdminPageToolbar
+          title="Products"
+          description="Search, filter, and export the published catalogue."
+          count={filteredProducts.length}
+          countLabel="items"
+          searchValue={searchInput}
+          onSearchChange={setSearchInput}
+          searchPlaceholder="Search name, brand, or category"
+          filters={[
+            {
+              id: 'category',
+              ariaLabel: 'Filter by category',
+              value: selectedCategory,
+              onChange: (value) => handleFilterChange(setSelectedCategory, value),
+              options: categoriesList.map((item) => ({ value: item, label: item })),
+            },
+            {
+              id: 'brand',
+              ariaLabel: 'Filter by brand',
+              value: selectedBrand,
+              onChange: (value) => handleFilterChange(setSelectedBrand, value),
+              options: brandsList.map((item) => ({ value: item, label: item })),
+            },
+            {
+              id: 'status',
+              ariaLabel: 'Filter by status',
+              value: selectedStatus,
+              onChange: (value) => handleFilterChange(setSelectedStatus, value),
+              options: [
+                { value: 'All Status', label: 'All status' },
+                { value: 'Active', label: 'Active' },
+                { value: 'Inactive', label: 'Inactive' },
+              ],
+            },
+          ]}
+          extra={
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
               <input
-                type="text"
-                placeholder="Search products..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F5A000]/30 transition-all"
+                type="checkbox"
+                checked={isBestSellerOnly}
+                onChange={(event) => handleFilterChange(setIsBestSellerOnly, event.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-[#F5A000] focus:ring-[#F5A000]"
               />
-            </div>
-
-            {/* Category Filter */}
-            <div>
-              <select
-                value={selectedCategory}
-                onChange={(e) => handleFilterChange(setSelectedCategory, e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#F5A000]/30 cursor-pointer"
-              >
-                {categoriesList.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Brand / Company Filter */}
-            <div>
-              <select
-                value={selectedBrand}
-                onChange={(e) => handleFilterChange(setSelectedBrand, e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#F5A000]/30 cursor-pointer"
-              >
-                {brandsList.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Status Filter */}
-            <div>
-              <select
-                value={selectedStatus}
-                onChange={(e) => handleFilterChange(setSelectedStatus, e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#F5A000]/30 cursor-pointer"
-              >
-                <option value="All Status">All Status</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
-
-            {/* Checkbox Best Sellers & Clear Filters */}
-            <div className="flex items-center justify-between sm:justify-end gap-3">
-              <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={isBestSellerOnly}
-                  onChange={(e) => handleFilterChange(setIsBestSellerOnly, e.target.checked)}
-                  className="w-4 h-4 text-[#F5A000] border-slate-300 rounded focus:ring-[#F5A000]"
-                />
-                <span>Best Sellers</span>
-              </label>
-
-              <button
-                type="button"
-                onClick={handleClearFilters}
-                className="p-2 text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0"
-                title="Reset all filters"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Clear Filters</span>
-              </button>
-            </div>
-          </div>
-        </div>
+              Best sellers
+            </label>
+          }
+          onClear={handleClearFilters}
+          onExportExcel={handleExportExcel}
+          onExportJson={handleExportJSON}
+          actions={
+            <button type="button" onClick={() => navigate('/admin/products/add')} className={adminButtonClass.primary}>
+              <Plus className="h-4 w-4" />
+              Add product
+            </button>
+          }
+        />
 
         {/* Selected Products Banner */}
         {selectedProductIds.length > 0 && (
