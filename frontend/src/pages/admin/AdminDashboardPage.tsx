@@ -1,10 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { FolderTree, Package, Plus, ShoppingBag, Sparkles, Star, Users } from 'lucide-react';
 import AdminLayout from '../../components/admin/AdminLayout';
+import { adminButtonClass } from '../../components/admin/AdminPageToolbar';
 import { useProducts } from '../../context/ProductContext';
 import { useCategories } from '../../context/CategoryContext';
 import { useAuth } from '../../hooks/useAuth';
 import { orderService } from '../../services/orderService';
+import { downloadExcelSheets, downloadJson, exportDateStamp } from '../../utils/adminExport';
 
 export const AdminDashboardPage: React.FC = () => {
   const { products } = useProducts();
@@ -35,44 +38,65 @@ export const AdminDashboardPage: React.FC = () => {
     }
   };
 
+  const summaryRows = [
+    { Metric: 'Products', Value: totalProducts },
+    { Metric: 'Best sellers', Value: bestSellerCount },
+    { Metric: 'New arrivals', Value: newArrivalCount },
+    { Metric: 'Categories', Value: totalCategories },
+    { Metric: 'Orders', Value: totalOrders },
+    { Metric: 'Users', Value: totalUsers },
+  ];
+  const orderRows = orders.map((order) => ({
+    OrderId: order.id,
+    Customer: order.customerName,
+    Email: order.customerEmail,
+    Total: order.totalAmount,
+    Status: order.status,
+    Date: new Date(order.createdAt).toLocaleDateString(),
+  }));
+  const userRows = users.map((user) => ({
+    Name: user.name,
+    Email: user.email,
+    Role: user.role,
+    Joined: user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '',
+  }));
+
+  const exportDashboard = (format: 'excel' | 'json') => {
+    if (format === 'json') {
+      downloadJson({ summary: summaryRows, orders: orderRows, users: userRows }, `dashboard_${exportDateStamp()}`);
+      return;
+    }
+    downloadExcelSheets(
+      [
+        { name: 'Summary', rows: summaryRows },
+        { name: 'Orders', rows: orderRows },
+        { name: 'Users', rows: userRows },
+      ],
+      `dashboard_${exportDateStamp()}`,
+    );
+  };
+
   return (
     <AdminLayout title="Admin Overview">
-      {/* Quick Action Buttons */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pb-2">
+      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
-            Store Performance
-          </h2>
-          <p className="text-xs text-slate-500 font-normal">
-            Real-time metric summary powered by LocalStorage architecture.
-          </p>
+          <h2 className="text-lg font-extrabold tracking-tight text-slate-900">Store overview</h2>
+          <p className="mt-1 text-xs text-slate-500">Catalogue, orders, and accounts at a glance.</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Link
-            to="/admin/products/add"
-            className="bg-[#F5A000] hover:bg-amber-600 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-md transition-all flex items-center gap-1.5"
-          >
-            <span>+</span>
-            <span>Add Product</span>
-          </Link>
-          <Link
-            to="/admin/products"
-            className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all"
-          >
-            Manage Products
-          </Link>
-          <Link
-            to="/admin/categories"
-            className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all"
-          >
-            Manage Categories
-          </Link>
-          <Link
-            to="/admin/orders"
-            className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all"
-          >
-            View Orders
+        <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+          <button type="button" onClick={() => exportDashboard('excel')} className={adminButtonClass.excel}>
+            Export Excel
+          </button>
+          <button type="button" onClick={() => exportDashboard('json')} className={adminButtonClass.json}>
+            Export JSON
+          </button>
+          <Link to="/admin/products" className={adminButtonClass.secondary}>Products</Link>
+          <Link to="/admin/catalog" className={adminButtonClass.secondary}>Brands</Link>
+          <Link to="/admin/orders" className={adminButtonClass.secondary}>Orders</Link>
+          <Link to="/admin/products/add" className={adminButtonClass.primary}>
+            <Plus className="h-4 w-4" />
+            Add product
           </Link>
         </div>
       </div>
@@ -86,8 +110,8 @@ export const AdminDashboardPage: React.FC = () => {
             <h3 className="text-2xl font-black text-slate-900 mt-0.5">{totalProducts}</h3>
             <span className="text-[10px] font-semibold text-emerald-600">In catalogue</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center text-lg shrink-0">
-            📦
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+            <Package className="h-5 w-5" />
           </div>
         </div>
 
@@ -98,8 +122,8 @@ export const AdminDashboardPage: React.FC = () => {
             <h3 className="text-2xl font-black text-slate-900 mt-0.5">{bestSellerCount}</h3>
             <span className="text-[10px] font-semibold text-amber-600">Highlighted</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-[#F5A000] flex items-center justify-center text-lg shrink-0">
-            ★
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-[#F5A000]">
+            <Star className="h-5 w-5" />
           </div>
         </div>
 
@@ -110,8 +134,8 @@ export const AdminDashboardPage: React.FC = () => {
             <h3 className="text-2xl font-black text-slate-900 mt-0.5">{newArrivalCount}</h3>
             <span className="text-[10px] font-semibold text-blue-600">Latest items</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-lg shrink-0">
-            ✨
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <Sparkles className="h-5 w-5" />
           </div>
         </div>
 
@@ -122,8 +146,8 @@ export const AdminDashboardPage: React.FC = () => {
             <h3 className="text-2xl font-black text-slate-900 mt-0.5">{totalCategories}</h3>
             <span className="text-[10px] font-semibold text-blue-600">Active groupings</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-lg shrink-0">
-            📂
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+            <FolderTree className="h-5 w-5" />
           </div>
         </div>
 
@@ -134,8 +158,8 @@ export const AdminDashboardPage: React.FC = () => {
             <h3 className="text-2xl font-black text-slate-900 mt-0.5">{totalOrders}</h3>
             <span className="text-[10px] font-semibold text-emerald-600">Recorded orders</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg shrink-0">
-            🛍️
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+            <ShoppingBag className="h-5 w-5" />
           </div>
         </div>
 
@@ -146,8 +170,8 @@ export const AdminDashboardPage: React.FC = () => {
             <h3 className="text-2xl font-black text-slate-900 mt-0.5">{totalUsers}</h3>
             <span className="text-[10px] font-semibold text-purple-600">Registered</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg shrink-0">
-            👥
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+            <Users className="h-5 w-5" />
           </div>
         </div>
       </div>
@@ -160,7 +184,7 @@ export const AdminDashboardPage: React.FC = () => {
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div>
               <h3 className="text-base font-extrabold text-slate-900">Recent Orders</h3>
-              <p className="text-xs text-slate-500">Latest transactions saved in LocalStorage</p>
+              <p className="text-xs text-slate-500">Latest transactions</p>
             </div>
             <Link to="/admin/orders" className="text-xs font-bold text-[#F5A000] hover:underline">
               View All →

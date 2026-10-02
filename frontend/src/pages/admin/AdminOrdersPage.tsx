@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
+import AdminPageToolbar from '../../components/admin/AdminPageToolbar';
 import { orderService } from '../../services/orderService';
 import type { Order, OrderStatus } from '../../types/order';
+import { downloadExcel, downloadJson, exportDateStamp } from '../../utils/adminExport';
 
 export const AdminOrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>(() => orderService.getOrders());
@@ -41,40 +43,53 @@ export const AdminOrdersPage: React.FC = () => {
     }
   };
 
+  const orderExportRows = filteredOrders.map((order) => ({
+    OrderId: order.id,
+    Date: new Date(order.createdAt).toLocaleString('en-IN'),
+    Customer: order.customerName,
+    Email: order.customerEmail,
+    Phone: order.customerPhone,
+    Address: order.shippingAddress || '',
+    Items: order.items.map((item) => `${item.quantity}x ${item.title}`).join('; '),
+    Subtotal: order.subtotal,
+    GST: order.gst,
+    Total: order.totalAmount,
+    Status: order.status,
+    Payment: order.paymentMethod,
+  }));
+
   return (
     <AdminLayout title="Order Management">
-      {/* Top Header & Filters */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Customer Orders ({filteredOrders.length})</h2>
-            <p className="text-xs text-slate-500">Track and manage digital product order statuses.</p>
-          </div>
-
-          {/* Filter Bar */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-            <input
-              type="text"
-              placeholder="Search Order ID or customer..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:w-60 px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F5A000]/30"
-            />
-
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full sm:w-40 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#F5A000]/30 cursor-pointer"
-            >
-              <option value="All">All Statuses</option>
-              <option value="Pending">Pending</option>
-              <option value="Processing">Processing</option>
-              <option value="Completed">Completed</option>
-              <option value="Cancelled">Cancelled</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      <AdminPageToolbar
+        title="Orders"
+        description="Search by order or customer, filter by status, and export the current list."
+        count={filteredOrders.length}
+        countLabel="orders"
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchPlaceholder="Search order ID, name, or email"
+        filters={[
+          {
+            id: 'status',
+            ariaLabel: 'Filter by order status',
+            value: selectedStatus,
+            onChange: setSelectedStatus,
+            options: [
+              { value: 'All', label: 'All status' },
+              { value: 'Pending', label: 'Pending' },
+              { value: 'Processing', label: 'Processing' },
+              { value: 'Completed', label: 'Completed' },
+              { value: 'Cancelled', label: 'Cancelled' },
+            ],
+          },
+        ]}
+        onClear={() => {
+          setSearchQuery('');
+          setSelectedStatus('All');
+        }}
+        onExportExcel={() => downloadExcel(orderExportRows, 'Orders', `orders_${exportDateStamp()}`)}
+        onExportJson={() => downloadJson(orderExportRows, `orders_${exportDateStamp()}`)}
+      />
 
       {/* Orders Table */}
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden">
@@ -117,7 +132,7 @@ export const AdminOrdersPage: React.FC = () => {
                       <div className="text-[11px] text-slate-500">{order.customerPhone}</div>
                       {order.shippingAddress && (
                         <div className="text-[10px] text-slate-400 mt-1 line-clamp-1">
-                          📍 {order.shippingAddress}
+                          {order.shippingAddress}
                         </div>
                       )}
                     </td>

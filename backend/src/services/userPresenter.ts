@@ -3,6 +3,8 @@ import type { IUser } from '../models/User.js';
 const DEFAULT_ADMIN_PERMISSIONS = [
   'dashboard',
   'products',
+  'draft-products',
+  'banners',
   'categories',
   'orders',
   'users',

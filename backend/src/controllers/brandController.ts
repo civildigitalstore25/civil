@@ -34,10 +34,14 @@ export const createBrand = async (req: Request, res: Response): Promise<void> =>
     res.status(400).json({ success: false, message: 'Brand name is required' });
     return;
   }
-  const slug = toSlug(name);
+  const slug = toSlug(String(req.body.slug || '').trim() || name);
+  if (!slug) {
+    res.status(400).json({ success: false, message: 'Brand slug is required' });
+    return;
+  }
   const existing = await Brand.findOne({ slug });
   if (existing) {
-    res.status(400).json({ success: false, message: 'That brand already exists' });
+    res.status(400).json({ success: false, message: 'That brand slug already exists' });
     return;
   }
   const brand = await Brand.create({ name, slug, categories: [] });
@@ -55,9 +59,13 @@ export const addBrandCategory = async (req: Request, res: Response): Promise<voi
     res.status(404).json({ success: false, message: 'Brand not found' });
     return;
   }
-  const slug = toSlug(name);
+  const slug = toSlug(String(req.body.slug || '').trim() || name);
+  if (!slug) {
+    res.status(400).json({ success: false, message: 'Category slug is required' });
+    return;
+  }
   if (brand.categories.some((item) => item.slug === slug)) {
-    res.status(400).json({ success: false, message: 'That category already exists in this brand' });
+    res.status(400).json({ success: false, message: 'That category slug already exists in this brand' });
     return;
   }
   brand.categories.push({ name, slug });

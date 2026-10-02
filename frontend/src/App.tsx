@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import ProductListingPage from './pages/ProductListingPage';
 import CartPage from './pages/CartPage';
@@ -15,14 +15,15 @@ import ScrollToTop from './components/common/ScrollToTop';
 
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminRoute from './components/auth/AdminRoute';
+import GuestRoute from './components/auth/GuestRoute';
 
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
 import AdminProductsPage from './pages/admin/AdminProductsPage';
 import AdminDraftProductsPage from './pages/admin/AdminDraftProductsPage';
 import AddProductPage from './pages/admin/AddProductPage';
 import EditProductPage from './pages/admin/EditProductPage';
-import AdminCategoriesPage from './pages/admin/AdminCategoriesPage';
-import AdminBrandsPage from './pages/admin/AdminBrandsPage';
+import AdminCatalogPage from './pages/admin/AdminCatalogPage';
+import AdminBannersPage from './pages/admin/AdminBannersPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 import AdminProfilePage from './pages/admin/AdminProfilePage';
@@ -43,8 +44,22 @@ function App() {
               <Routes>
                 {/* Public General Routes */}
                 <Route path="/" element={<HomePage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
+                <Route
+                  path="/login"
+                  element={
+                    <GuestRoute>
+                      <LoginPage />
+                    </GuestRoute>
+                  }
+                />
+                <Route
+                  path="/register"
+                  element={
+                    <GuestRoute>
+                      <RegisterPage />
+                    </GuestRoute>
+                  }
+                />
                 <Route path="/forgot-password" element={<ForgotPasswordPage />} />
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
                 <Route path="/cart" element={<CartPage />} />
@@ -119,21 +134,23 @@ function App() {
                   }
                 />
                 <Route
-                  path="/admin/brands"
+                  path="/admin/banners"
                   element={
                     <AdminRoute>
-                      <AdminBrandsPage />
+                      <AdminBannersPage />
                     </AdminRoute>
                   }
                 />
                 <Route
-                  path="/admin/categories"
+                  path="/admin/catalog"
                   element={
                     <AdminRoute>
-                      <AdminCategoriesPage />
+                      <AdminCatalogPage />
                     </AdminRoute>
                   }
                 />
+                <Route path="/admin/brands" element={<Navigate to="/admin/catalog" replace />} />
+                <Route path="/admin/categories" element={<Navigate to="/admin/catalog" replace />} />
                 <Route
                   path="/admin/users"
                   element={

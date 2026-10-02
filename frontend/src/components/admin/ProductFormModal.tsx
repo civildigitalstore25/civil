@@ -14,7 +14,8 @@ import {
   DollarSign,
   Gift,
   Sliders,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Eye
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import type {
@@ -91,6 +92,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   const [imageUrl, setImageUrl] = useState('');
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [newAddImageUrl, setNewAddImageUrl] = useState('');
 
   const [videoUrl, setVideoUrl] = useState('');
@@ -554,6 +556,10 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }, 450);
   };
 
+  const selectedBrandRecord = brandOptions.find((item) => item.name === brand);
+  const brandCategories = selectedBrandRecord?.categories ?? [];
+  const categoryNotRequired = Boolean(selectedBrandRecord) && brandCategories.length === 0;
+
   if (!asPage && !isOpen) return null;
 
   const steps = [
@@ -743,8 +749,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           
           {/* Notifications Alerts */}
           {error && (
-            <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 font-bold rounded-xl flex items-center gap-2 animate-fade-in">
-              <span>⚠️</span>
+            <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 font-bold text-rose-700">
               <span>{error}</span>
             </div>
           )}
@@ -841,21 +846,27 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700 block">Category *</label>
+                  <label className="font-bold text-slate-700 block">
+                    Category{categoryNotRequired ? '' : ' *'}
+                  </label>
                   <select
                     value={category}
                     onChange={(event) => setCategory(event.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold focus:outline-none cursor-pointer"
                   >
-                    <option value="">Select category</option>
-                    {(brandOptions.find((item) => item.name === brand)?.categories || []).map((item) => (
+                    <option value="">{categoryNotRequired ? 'No category' : 'Select category'}</option>
+                    {brandCategories.map((item) => (
                       <option key={item.slug} value={item.name}>{item.name}</option>
                     ))}
-                    {category && !(brandOptions.find((item) => item.name === brand)?.categories || []).some((item) => item.name === category) && (
+                    {category && !brandCategories.some((item) => item.name === category) && (
                       <option value={category}>{category}</option>
                     )}
                   </select>
-                  <p className="text-[11px] text-slate-500">Product type inside the selected brand, such as AutoCAD.</p>
+                  <p className="text-[11px] text-slate-500">
+                    {categoryNotRequired
+                      ? 'This brand has no categories. You can save the product without one.'
+                      : 'Product type inside the selected brand, such as AutoCAD.'}
+                  </p>
                 </div>
               </div>
 
@@ -1173,6 +1184,19 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   onChange={(e) => setImageUrl(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
                 />
+                {imageUrl.trim() && (
+                  <div className="mt-2 flex items-center gap-3">
+                    <img src={imageUrl.trim()} alt="" className="h-24 w-40 rounded-xl border border-slate-200 bg-slate-100 object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setPreviewSrc(imageUrl.trim())}
+                      className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Preview
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Additional Images List */}
@@ -1194,6 +1218,19 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     + Add Image
                   </button>
                 </div>
+                {newAddImageUrl.trim() && (
+                  <div className="flex items-center gap-3">
+                    <img src={newAddImageUrl.trim()} alt="" className="h-20 w-32 rounded-xl border border-slate-200 bg-slate-100 object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setPreviewSrc(newAddImageUrl.trim())}
+                      className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Preview
+                    </button>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                   {additionalImages.map((img, idx) => (
@@ -1202,6 +1239,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       className="relative rounded-xl border border-slate-200 bg-slate-100 h-24 overflow-hidden group"
                     >
                       <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setPreviewSrc(img)}
+                        className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-md bg-white/95 px-1.5 py-1 text-[10px] font-bold text-slate-800"
+                      >
+                        <Eye className="h-3 w-3" />
+                        Preview
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleRemoveAdditionalImage(idx)}
@@ -1825,6 +1870,22 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           }}
           onClose={() => setActiveIconPickerIndex(null)}
         />
+      )}
+
+      {previewSrc && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 p-4" onClick={() => setPreviewSrc(null)}>
+          <div className="relative max-h-[90vh] max-w-5xl" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setPreviewSrc(null)}
+              className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-800 shadow"
+              aria-label="Close preview"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <img src={previewSrc} alt="Product preview" className="max-h-[85vh] max-w-full rounded-2xl bg-white object-contain" />
+          </div>
+        </div>
       )}
     </div>
   );
