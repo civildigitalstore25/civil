@@ -22,6 +22,7 @@ import AdminDraftProductsPage from './pages/admin/AdminDraftProductsPage';
 import AddProductPage from './pages/admin/AddProductPage';
 import EditProductPage from './pages/admin/EditProductPage';
 import AdminCategoriesPage from './pages/admin/AdminCategoriesPage';
+import AdminCouponsPage from './pages/admin/AdminCouponsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 import AdminProfilePage from './pages/admin/AdminProfilePage';
@@ -29,6 +30,7 @@ import AdminProfilePage from './pages/admin/AdminProfilePage';
 import { AuthProvider } from './context/AuthContext';
 import { ProductProvider } from './context/ProductContext';
 import { CategoryProvider } from './context/CategoryContext';
+import { CouponProvider } from './context/CouponContext';
 import { CartProvider } from './context/CartContext';
 
 function App() {
@@ -36,8 +38,9 @@ function App() {
     <AuthProvider>
       <ProductProvider>
         <CategoryProvider>
-          <CartProvider>
-            <Router>
+          <CouponProvider>
+            <CartProvider>
+              <Router>
               <ScrollToTop />
               <Routes>
                 {/* Public General Routes */}
@@ -126,6 +129,14 @@ function App() {
                   }
                 />
                 <Route
+                  path="/admin/coupons"
+                  element={
+                    <AdminRoute>
+                      <AdminCouponsPage />
+                    </AdminRoute>
+                  }
+                />
+                <Route
                   path="/admin/users"
                   element={
                     <AdminRoute>
@@ -166,10 +177,11 @@ function App() {
               </Routes>
             </Router>
           </CartProvider>
-        </CategoryProvider>
-      </ProductProvider>
-    </AuthProvider>
-  );
+        </CouponProvider>
+      </CategoryProvider>
+    </ProductProvider>
+  </AuthProvider>
+);
 }
 
 export default App;

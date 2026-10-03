@@ -7,6 +7,7 @@ export const STORAGE_KEYS = {
   CART: 'civil_cart',
   WISHLIST: 'civil_wishlist',
   REVIEWS: 'civil_reviews',
+  COUPONS: 'civil_coupons',
   LEGACY_AUTH_TOKEN: 'civil_auth_token',
 } as const;
 
