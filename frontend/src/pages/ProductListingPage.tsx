@@ -9,8 +9,10 @@ import FilterSidebar from '../components/filter/FilterSidebar';
 import MobileFilterDrawer from '../components/filter/MobileFilterDrawer';
 import WhatsAppButton from '../components/common/WhatsAppButton';
 import { useProducts } from '../context/ProductContext';
+import { useBackendBrands } from '../hooks/useBackendBrands';
 import type { CategoryDefinition } from '../data/categories';
 import type { FilterState, ProductCategory, SoftwareCompatibility } from '../types/product';
+import { slugify } from '../utils/slugify';
 
 const INITIAL_FILTERS: FilterState = {
   categories: [],
@@ -37,8 +39,15 @@ interface ProductListingPageProps {
 
 export const ProductListingPage: React.FC<ProductListingPageProps> = ({ categoryDef }) => {
   const { products } = useProducts();
+  const { brands } = useBackendBrands();
   const [searchParams] = useSearchParams();
   const filterParam = searchParams.get('filter')?.toLowerCase();
+  const brandParam = (searchParams.get('brand') || '').trim().toLowerCase();
+  const categoryParam = (searchParams.get('category') || '').trim().toLowerCase();
+  const selectedBrand = brands.find((brand) => brand.slug.toLowerCase() === brandParam);
+  const selectedCategory = (selectedBrand?.categories ?? brands.flatMap((brand) => brand.categories)).find(
+    (category) => category.slug.toLowerCase() === categoryParam,
+  );
 
   const [filters, setFilters] = useState<FilterState>(() => {
     if (!categoryDef) return INITIAL_FILTERS;
@@ -93,6 +102,17 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({ category
         if (!product.isNewArrival && product.badge !== 'New') return false;
       }
 
+      if (brandParam) {
+        const brandName = product.brand || product.software || product.company || '';
+        if (slugify(brandName) !== brandParam && brandName.trim().toLowerCase() !== brandParam) return false;
+      }
+      if (categoryParam) {
+        const categorySlug = (product.categorySlug || slugify(product.category || '')).toLowerCase();
+        if (categorySlug !== categoryParam && (product.category || '').trim().toLowerCase() !== categoryParam) {
+          return false;
+        }
+      }
+
       // Category filter
       if (filters.categories.length > 0 && !filters.categories.includes(product.category)) {
         return false;
@@ -136,7 +156,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({ category
       }
       return 0; // featured default order
     });
-  }, [products, filters, filterParam]);
+  }, [products, filters, filterParam, brandParam, categoryParam]);
 
   const activeCategoryPill =
     filters.categories.length === 1 ? filters.categories[0] : 'All';
@@ -157,11 +177,13 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({ category
           <nav className="flex items-center space-x-2 text-xs font-semibold text-slate-500">
             <Link to="/" className="hover:text-[#F5A623] transition-colors">Home</Link>
             <span>/</span>
-            {categoryDef ? (
+            {categoryDef || selectedCategory || selectedBrand ? (
               <>
                 <Link to="/products" className="hover:text-[#F5A623] transition-colors">Products</Link>
                 <span>/</span>
-                <span className="text-[#F5A623] font-bold">{categoryDef.name}</span>
+                <span className="text-[#F5A623] font-bold">
+                  {categoryDef?.name || selectedCategory?.name || selectedBrand?.name}
+                </span>
               </>
             ) : (
               <span className="text-[#F5A623] font-bold">All Products</span>
@@ -173,6 +195,10 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({ category
               <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
                 {categoryDef
                   ? `${categoryDef.name} Digital Bundles`
+                  : selectedCategory
+                  ? selectedCategory.name
+                  : selectedBrand
+                  ? selectedBrand.name
                   : filterParam === 'best-seller' || filterParam === 'best-sellers'
                   ? 'Best Sellers Collection'
                   : filterParam === 'new-arrivals' || filterParam === 'new-arrival'
@@ -182,11 +208,15 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({ category
               <p className="text-slate-500 text-xs sm:text-sm mt-1">
                 {categoryDef
                   ? categoryDef.description
+                  : selectedCategory
+                  ? `Products in ${selectedBrand ? `${selectedBrand.name} / ` : ''}${selectedCategory.name}.`
+                  : selectedBrand
+                  ? `Products published under ${selectedBrand.name}.`
                   : filterParam === 'best-seller' || filterParam === 'best-sellers'
                   ? 'Top-rated digital software packages and CAD/BIM libraries trusted by engineers.'
                   : filterParam === 'new-arrivals' || filterParam === 'new-arrival'
                   ? 'Explore the latest added CAD drawings, Revit families, and civil calculation tools.'
-                  : 'Explore 100% digital AutoCAD bundles, Revit families, Excel BOQs, & civil engineering packages.'}
+                  : 'Explore the products currently published in the catalog.'}
               </p>
             </div>
 

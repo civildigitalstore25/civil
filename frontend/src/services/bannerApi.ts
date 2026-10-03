@@ -7,8 +7,22 @@ export interface BannerRecord {
   slot: BannerSlot;
   imageUrl: string;
   linkUrl: string;
+  headline: string;
+  subheadline: string;
+  ctaLabel: string;
+  altText: string;
   isActive: boolean;
   sortOrder: number;
+}
+
+export interface BannerInput {
+  slot: BannerSlot;
+  imageUrl: string;
+  linkUrl: string;
+  headline?: string;
+  subheadline?: string;
+  ctaLabel?: string;
+  altText?: string;
 }
 
 interface BannerResponse {
@@ -31,7 +45,7 @@ export const bannerApi = {
     return data.banners;
   },
 
-  async create(input: { slot: BannerSlot; imageUrl: string; linkUrl: string }): Promise<BannerRecord> {
+  async create(input: BannerInput): Promise<BannerRecord> {
     const { response, data } = await apiRequest<BannerResponse>('/banners', {
       method: 'POST',
       body: JSON.stringify(input),
@@ -40,7 +54,10 @@ export const bannerApi = {
     return data.banner;
   },
 
-  async update(id: string, input: Partial<Pick<BannerRecord, 'slot' | 'imageUrl' | 'linkUrl' | 'isActive'>>): Promise<BannerRecord> {
+  async update(
+    id: string,
+    input: Partial<Pick<BannerRecord, 'slot' | 'imageUrl' | 'linkUrl' | 'headline' | 'subheadline' | 'ctaLabel' | 'altText' | 'isActive'>>,
+  ): Promise<BannerRecord> {
     const { response, data } = await apiRequest<BannerResponse>(`/banners/${id}`, {
       method: 'PUT',
       body: JSON.stringify(input),
