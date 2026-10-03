@@ -1,8 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import logoImg from '../../assets/logo_white_text.png';
+import { useBackendBrands } from '../../hooks/useBackendBrands';
 
 export const Footer: React.FC = () => {
+  const { brands } = useBackendBrands();
+
   return (
     <footer className="w-full bg-[#0D1624] text-slate-300 border-t border-slate-800/80 font-sans">
       {/* Top Main Section */}
@@ -58,42 +61,14 @@ export const Footer: React.FC = () => {
                   Home
                 </Link>
               </li>
-              <li>
-                <Link to="/products?category=Softwares" className="hover:text-[#F5A623] transition-colors flex items-center gap-1.5 group">
-                  <span className="text-[#F5A623] opacity-0 group-hover:opacity-100 transition-opacity">›</span>
-                  Softwares
-                </Link>
-              </li>
-              <li>
-                <Link to="/autocad-software/" className="hover:text-[#F5A623] transition-colors flex items-center gap-1.5 group">
-                  <span className="text-[#F5A623] opacity-0 group-hover:opacity-100 transition-opacity">›</span>
-                  Softwares
-                </Link>
-              </li>
-              <li>
-                <Link to="/excel-sheets/" className="hover:text-[#F5A623] transition-colors flex items-center gap-1.5 group">
-                  <span className="text-[#F5A623] opacity-0 group-hover:opacity-100 transition-opacity">›</span>
-                  Excel Sheets
-                </Link>
-              </li>
-              <li>
-                <Link to="/ebooks/" className="hover:text-[#F5A623] transition-colors flex items-center gap-1.5 group">
-                  <span className="text-[#F5A623] opacity-0 group-hover:opacity-100 transition-opacity">›</span>
-                  eBooks
-                </Link>
-              </li>
-              <li>
-                <Link to="/projects/" className="hover:text-[#F5A623] transition-colors flex items-center gap-1.5 group">
-                  <span className="text-[#F5A623] opacity-0 group-hover:opacity-100 transition-opacity">›</span>
-                  3D Elevation
-                </Link>
-              </li>
-              <li>
-                <Link to="/projects/" className="hover:text-[#F5A623] transition-colors flex items-center gap-1.5 group">
-                  <span className="text-[#F5A623] opacity-0 group-hover:opacity-100 transition-opacity">›</span>
-                  Projects
-                </Link>
-              </li>
+              {brands.map((brand) => (
+                <li key={brand._id}>
+                  <Link to={`/products?brand=${encodeURIComponent(brand.slug)}`} className="hover:text-[#F5A623] transition-colors flex items-center gap-1.5 group">
+                    <span className="text-[#F5A623] opacity-0 group-hover:opacity-100 transition-opacity">›</span>
+                    {brand.name}
+                  </Link>
+                </li>
+              ))}
               <li>
                 <a href="#privacy" className="hover:text-[#F5A623] transition-colors flex items-center gap-1.5 group">
                   <span className="text-[#F5A623] opacity-0 group-hover:opacity-100 transition-opacity">›</span>

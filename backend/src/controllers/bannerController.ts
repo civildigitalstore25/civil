@@ -6,6 +6,10 @@ const present = (banner: {
   slot: string;
   imageUrl: string;
   linkUrl: string;
+  headline?: string;
+  subheadline?: string;
+  ctaLabel?: string;
+  altText?: string;
   isActive: boolean;
   sortOrder: number;
 }) => ({
@@ -13,6 +17,10 @@ const present = (banner: {
   slot: banner.slot,
   imageUrl: banner.imageUrl,
   linkUrl: banner.linkUrl,
+  headline: banner.headline || '',
+  subheadline: banner.subheadline || '',
+  ctaLabel: banner.ctaLabel || '',
+  altText: banner.altText || '',
   isActive: banner.isActive,
   sortOrder: banner.sortOrder,
 });
@@ -49,6 +57,10 @@ export const createBanner = async (req: Request, res: Response): Promise<void> =
     slot,
     imageUrl,
     linkUrl,
+    headline: String(req.body.headline || '').trim(),
+    subheadline: String(req.body.subheadline || '').trim(),
+    ctaLabel: String(req.body.ctaLabel || '').trim(),
+    altText: String(req.body.altText || '').trim(),
     isActive: req.body.isActive !== false,
     sortOrder: count,
   });
@@ -78,6 +90,10 @@ export const updateBanner = async (req: Request, res: Response): Promise<void> =
     banner.imageUrl = imageUrl;
   }
   if (req.body.linkUrl !== undefined) banner.linkUrl = String(req.body.linkUrl).trim();
+  if (req.body.headline !== undefined) banner.headline = String(req.body.headline).trim();
+  if (req.body.subheadline !== undefined) banner.subheadline = String(req.body.subheadline).trim();
+  if (req.body.ctaLabel !== undefined) banner.ctaLabel = String(req.body.ctaLabel).trim();
+  if (req.body.altText !== undefined) banner.altText = String(req.body.altText).trim();
   if (req.body.isActive !== undefined) banner.isActive = Boolean(req.body.isActive);
   await banner.save();
   res.json({ success: true, banner: present(banner) });
