@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import AdminLayout from '../../components/admin/AdminLayout';
 import { ProductFormModal } from '../../components/admin/ProductFormModal';
 import { useProducts } from '../../context/ProductContext';
 import type { Product } from '../../types/product';
@@ -11,9 +12,9 @@ export const EditProductPage: React.FC = () => {
 
   const product = products.find((p) => p.id === id || p._id === id) || null;
 
-  const handleFormSubmit = (data: Partial<Product> & { name: string; price: number }, isDraft = false) => {
+  const handleFormSubmit = async (data: Partial<Product> & { name: string; price: number }, isDraft = false) => {
     if (!id) return { success: false, error: 'Product ID missing' };
-    const res = updateProduct(id, data, isDraft);
+    const res = await updateProduct(id, data, isDraft);
     if (res.success) {
       navigate('/admin/products');
     }
@@ -35,12 +36,15 @@ export const EditProductPage: React.FC = () => {
   }
 
   return (
-    <ProductFormModal
-      isOpen={true}
-      onClose={() => navigate('/admin/products')}
-      product={product}
-      onSubmit={handleFormSubmit}
-    />
+    <AdminLayout title="Edit product">
+      <ProductFormModal
+        asPage
+        isOpen
+        onClose={() => navigate('/admin/products')}
+        product={product}
+        onSubmit={handleFormSubmit}
+      />
+    </AdminLayout>
   );
 };
 

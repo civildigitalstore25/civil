@@ -3,6 +3,7 @@ import Header from '../components/layout/Header';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import HeroSection from '../components/home/HeroSection';
+import HomeBanners from '../components/home/HomeBanners';
 import SoftwareCollection from '../components/home/SoftwareCollection';
 import BestSellersSection from '../components/home/BestSellersSection';
 import NewArrivalsSection from '../components/home/NewArrivalsSection';
@@ -29,7 +30,7 @@ export const HomePage = () => {
 
       {/* Main Content */}
       <main className="flex-grow">
-        {/* 1. Hero Banner */}
+        <HomeBanners />
         <HeroSection />
 
         {/* 2. All Category Icons Grid */}

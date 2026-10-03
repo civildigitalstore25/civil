@@ -14,7 +14,8 @@ import {
   DollarSign,
   Gift,
   Sliders,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Eye
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import type {
@@ -27,22 +28,26 @@ import type {
 import { slugify } from '../../utils/slugify';
 import { RichTextEditor } from './RichTextEditor';
 import { IconPickerModal } from './IconPickerModal';
+import { brandApi, type BrandRecord } from '../../services/brandApi';
 
 interface ProductFormModalProps {
   isOpen: boolean;
   onClose: () => void;
   product?: Product | null;
+  /** Full admin page instead of a popup. */
+  asPage?: boolean;
   onSubmit: (
     data: Partial<Product> & { name: string; price: number },
     isDraft?: boolean
-  ) => { success: boolean; error?: string };
+  ) => { success: boolean; error?: string } | Promise<{ success: boolean; error?: string }>;
 }
 
 export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   isOpen,
   onClose,
   product,
-  onSubmit
+  onSubmit,
+  asPage = false,
 }) => {
   const isEditing = Boolean(product);
   const isEditingDraft = product?.status === 'draft';
@@ -57,8 +62,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [version, setVersion] = useState('');
   const [slug, setSlug] = useState('');
   const [customSlugEdited, setCustomSlugEdited] = useState(false);
-  const [category, setCategory] = useState('Softwares');
-  const [brand, setBrand] = useState('AutoCAD');
+  const [brandOptions, setBrandOptions] = useState<BrandRecord[]>([]);
+  const [category, setCategory] = useState('');
+  const [brand, setBrand] = useState('');
 
   const [longDescription, setLongDescription] = useState('');
   const [detailsDescription, setDetailsDescription] = useState('');
@@ -86,6 +92,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   const [imageUrl, setImageUrl] = useState('');
   const [additionalImages, setAdditionalImages] = useState<string[]>([]);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   const [newAddImageUrl, setNewAddImageUrl] = useState('');
 
   const [videoUrl, setVideoUrl] = useState('');
@@ -137,13 +144,17 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    brandApi.list().then(setBrandOptions).catch(() => setBrandOptions([]));
+  }, []);
+
+  useEffect(() => {
     if (product) {
       setName(product.name || '');
       setVersion(product.version || '');
       setSlug(product.slug || '');
       setCustomSlugEdited(true);
-      setCategory(product.category || 'Softwares');
-      setBrand(product.brand || product.software || 'AutoCAD');
+      setCategory(product.category || '');
+      setBrand(product.brand || product.software || '');
 
       setLongDescription(product.longDescription || product.description?.join('\n\n') || '');
       setDetailsDescription(product.detailsDescription || '');
@@ -169,7 +180,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setStrikethroughPriceINR(product.strikethroughPriceINR || (product.oldPrice ? String(product.oldPrice) : ''));
       setStrikethroughPriceUSD(product.strikethroughPriceUSD || '');
 
-      setImageUrl(product.imageUrl || product.images?.[0] || 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=800&q=80');
+      setImageUrl(product.imageUrl || product.images?.[0] || '');
       setAdditionalImages(product.additionalImages || (product.images?.slice(1) || []));
 
       setVideoUrl(product.videoUrl || '');
@@ -181,17 +192,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setIsBestSeller(Boolean(product.isBestSeller));
       setIsOutOfStock(Boolean(product.isOutOfStock));
 
-      setFaqs(product.faqs || [
-        { question: 'How will I receive my files?', answer: 'Instant digital download link sent right after payment.' }
-      ]);
-      setKeyFeatures(product.keyFeatures || [
-        { icon: 'CheckCircle', title: 'High Precision DWG Drawings', description: 'Fully layered CAD & BIM structural design files.' },
-        { icon: 'Zap', title: 'Instant Download', description: 'Immediate access right after checkout.' }
-      ]);
-      setSystemRequirements(product.systemRequirements || [
-        { icon: 'Monitor', title: 'Operating System', description: 'Windows 10 / 11 (64-bit)' },
-        { icon: 'Cpu', title: 'RAM & CPU', description: 'Intel i5 8th Gen or higher with 8GB RAM' }
-      ]);
+      setFaqs(product.faqs || []);
+      setKeyFeatures(product.keyFeatures || []);
+      setSystemRequirements(product.systemRequirements || []);
 
       setIsDeal(Boolean(product.isDeal));
       setDealStartDate(product.dealStartDate || '');
@@ -220,8 +223,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setVersion('');
       setSlug('');
       setCustomSlugEdited(false);
-      setCategory('Softwares');
-      setBrand('AutoCAD');
+      setCategory('');
+      setBrand('');
 
       setLongDescription('');
       setDetailsDescription('');
@@ -230,27 +233,24 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setSeoDescription('');
       setSeoKeywords('');
 
-      setSubscriptionDurations([
-        { duration: '1 Month', price: '499', priceINR: '499', priceUSD: '6.99' },
-        { duration: '1 Year', price: '2999', priceINR: '2999', priceUSD: '39.99' }
-      ]);
-      setEbookPriceINR('499');
-      setEbookPriceUSD('6.99');
+      setSubscriptionDurations([]);
+      setEbookPriceINR('');
+      setEbookPriceUSD('');
 
-      setHasLifetime(true);
-      setLifetimePrice('4999');
-      setLifetimePriceINR('4999');
-      setLifetimePriceUSD('59.99');
+      setHasLifetime(false);
+      setLifetimePrice('');
+      setLifetimePriceINR('');
+      setLifetimePriceUSD('');
 
       setHasMembership(false);
       setMembershipPrice('');
       setMembershipPriceINR('');
       setMembershipPriceUSD('');
 
-      setStrikethroughPriceINR('999');
-      setStrikethroughPriceUSD('12.99');
+      setStrikethroughPriceINR('');
+      setStrikethroughPriceUSD('');
 
-      setImageUrl('https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=800&q=80');
+      setImageUrl('');
       setAdditionalImages([]);
       setNewAddImageUrl('');
 
@@ -264,16 +264,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setIsBestSeller(false);
       setIsOutOfStock(false);
 
-      setFaqs([
-        { question: 'What software is required?', answer: 'Compatible with AutoCAD 2018 or newer.' }
-      ]);
-      setKeyFeatures([
-        { icon: 'CheckCircle', title: 'High Precision DWG Drawings', description: 'Fully layered vector drawings.' },
-        { icon: 'Zap', title: 'Instant Digital Delivery', description: 'Immediate download link provided.' }
-      ]);
-      setSystemRequirements([
-        { icon: 'Monitor', title: 'Operating System', description: 'Windows 10 / 11 (64-bit)' }
-      ]);
+      setFaqs([]);
+      setKeyFeatures([]);
+      setSystemRequirements([]);
 
       setIsDeal(false);
       setDealStartDate('');
@@ -349,7 +342,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const handleAddSubDuration = () => {
     setSubscriptionDurations([
       ...subscriptionDurations,
-      { duration: '1 Month', price: '499', priceINR: '499', priceUSD: '6.99' }
+      { duration: '', price: '', priceINR: '', priceUSD: '' }
     ]);
   };
 
@@ -428,7 +421,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   };
 
   // Form Save Execution
-  const handleSave = (isDraftSave = false) => {
+  const handleSave = async (isDraftSave = false) => {
     setError(null);
     setSuccessMsg(null);
 
@@ -439,12 +432,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       return;
     }
 
-    const calculatedPrice =
-      Number(ebookPriceINR) ||
-      Number(lifetimePriceINR) ||
-      Number(subscriptionDurations[0]?.priceINR) ||
-      499;
-    const calculatedOldPrice = Number(strikethroughPriceINR) || calculatedPrice;
+    const enteredPrices = [
+      Number(ebookPriceINR),
+      hasLifetime ? Number(lifetimePriceINR) : 0,
+      hasMembership ? Number(membershipPriceINR) : 0,
+      ...subscriptionDurations.map((row) => Number(row.priceINR || row.price)),
+    ].filter((amount) => amount > 0);
+    const calculatedPrice = enteredPrices.length ? Math.min(...enteredPrices) : 0;
+    const calculatedOldPrice = Number(strikethroughPriceINR) || 0;
 
     setIsSubmitting(true);
 
@@ -465,27 +460,27 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       name: name.trim() || 'Untitled Product',
       version: version.trim(),
       slug: slug ? slugify(slug) : slugify(version ? `${name} ${version}` : name || 'product'),
-      categorySlug: category.toLowerCase().replace(/\s+/g, '-'),
+      categorySlug: category ? category.toLowerCase().replace(/\s+/g, '-') : '',
       category,
       software: brand,
       brand,
       company: brand,
       price: calculatedPrice,
       oldPrice: calculatedOldPrice,
-      format: 'ZIP / CAD / PDF',
-      fileSize: '250 MB',
-      badge: isBestSeller ? 'Bestseller' : 'New',
+      format: '',
+      fileSize: '',
+      badge: isBestSeller ? 'Bestseller' : '',
       isBestSeller,
       isOutOfStock,
       status: targetStatus,
 
-      shortDescription: name,
+      shortDescription: '',
       longDescription,
       detailsDescription,
-      description: longDescription ? [longDescription] : [name],
-      includedFiles: ['Digital Download Files', 'Installation Guide'],
-      images: imagesList.length > 0 ? imagesList : ['https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=800&q=80'],
-      imageUrl: imageUrl.trim() || imagesList[0],
+      description: longDescription.trim() ? [longDescription] : [],
+      includedFiles: [],
+      images: imagesList,
+      imageUrl: imageUrl.trim(),
       additionalImages,
 
       seoTitle: seoTitle.trim(),
@@ -515,9 +510,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       instagramReels,
       driveLink: driveLink.trim(),
 
-      faqs,
-      keyFeatures,
-      systemRequirements,
+      faqs: faqs.filter((item) => item.question.trim() || item.answer.trim()),
+      keyFeatures: keyFeatures.filter((item) => item.title.trim() || item.description.trim()),
+      systemRequirements: systemRequirements.filter((item) => item.title.trim() || item.description.trim()),
 
       isDeal,
       dealStartDate,
@@ -540,7 +535,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       freeProductEndTime
     };
 
-    const result = onSubmit(payload, isDraftSave);
+    const result = await Promise.resolve(onSubmit(payload, isDraftSave));
     setIsSubmitting(false);
 
     if (!result.success) {
@@ -561,13 +556,70 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }, 450);
   };
 
-  if (!isOpen) return null;
+  const selectedBrandRecord = brandOptions.find((item) => item.name === brand);
+  const brandCategories = selectedBrandRecord?.categories ?? [];
+  const categoryNotRequired = Boolean(selectedBrandRecord) && brandCategories.length === 0;
+
+  if (!asPage && !isOpen) return null;
+
+  const steps = [
+    { id: 'basic' as const, label: 'Basic info', icon: FileText },
+    { id: 'descriptions' as const, label: 'Descriptions', icon: Sliders },
+    { id: 'pricing' as const, label: 'Pricing', icon: DollarSign },
+    { id: 'media' as const, label: 'Media & links', icon: ImageIcon },
+    { id: 'deals' as const, label: 'Deals & free', icon: Gift },
+    { id: 'dynamic' as const, label: 'Features & FAQs', icon: Layers },
+    { id: 'seo' as const, label: 'SEO', icon: HelpCircle },
+  ];
+
+  const stepIndex = steps.findIndex((step) => step.id === activeTab);
+
+  const pageTitle = isEditing
+    ? isEditingDraft
+      ? `Publish draft`
+      : `Edit product`
+    : 'Add product';
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-hidden animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-6xl flex flex-col h-[94vh] overflow-hidden text-slate-900 animate-scale-up">
-        
-        {/* Sticky Modal Header */}
+    <div className={asPage ? 'text-slate-900' : 'fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-hidden animate-fade-in'}>
+      <div className={asPage ? 'flex flex-col gap-5 lg:flex-row lg:items-start w-full' : 'bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-6xl flex flex-col h-[94vh] overflow-hidden text-slate-900 animate-scale-up'}>
+        {asPage && (
+          <aside className="w-full lg:sticky lg:top-4 lg:w-60 shrink-0 bg-white border border-slate-200 rounded-2xl p-3 shadow-sm">
+            <p className="px-2 pb-2 text-[11px] font-black uppercase tracking-wider text-slate-400">Sections</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-1">
+              {steps.map((step, index) => {
+                const Icon = step.icon;
+                const selected = activeTab === step.id;
+                return (
+                  <button
+                    key={step.id}
+                    type="button"
+                    onClick={() => setActiveTab(step.id)}
+                    className={`flex items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-bold cursor-pointer ${
+                      selected ? 'bg-amber-50 text-[#D97706]' : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className={`flex h-6 w-6 items-center justify-center rounded-lg text-[11px] ${selected ? 'bg-[#F5A000] text-white' : 'bg-slate-100 text-slate-500'}`}>
+                      {index + 1}
+                    </span>
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span>{step.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
+        )}
+
+        <div className={asPage ? 'min-w-0 flex-1 bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col' : 'contents'}>
+        {asPage ? (
+          <div className="px-6 py-5 border-b border-slate-100">
+            <h2 className="text-xl font-extrabold text-slate-900">{pageTitle}</h2>
+            <p className="text-sm text-slate-500 mt-1">
+              {name.trim() || 'Untitled product'} · {status}
+            </p>
+          </div>
+        ) : (
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-amber-100 text-[#F5A000] rounded-xl font-bold">
@@ -596,8 +648,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+        )}
 
-        {/* Tab Navigation Header Bar */}
+        {!asPage && (
         <div className="flex items-center gap-1 px-6 bg-slate-100/70 border-b border-slate-200 overflow-x-auto no-scrollbar shrink-0 text-xs font-bold">
           <button
             type="button"
@@ -690,14 +743,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             <span>7. SEO Metadata</span>
           </button>
         </div>
+        )}
 
-        {/* Scrollable Form Body */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-6 text-xs">
+        <div className={asPage ? 'p-6 sm:p-8 space-y-6 text-sm' : 'p-6 overflow-y-auto flex-1 space-y-6 text-xs'}>
           
           {/* Notifications Alerts */}
           {error && (
-            <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 font-bold rounded-xl flex items-center gap-2 animate-fade-in">
-              <span>⚠️</span>
+            <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-4 font-bold text-rose-700">
               <span>{error}</span>
             </div>
           )}
@@ -731,6 +783,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     onChange={(e) => handleNameChange(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F5A000]/30"
                   />
+                  <p className="text-[11px] text-slate-500">Shown as the product title on the store and in search.</p>
                 </div>
 
                 <div className="space-y-1">
@@ -742,6 +795,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     onChange={(e) => handleVersionChange(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F5A000]/30"
                   />
+                  <p className="text-[11px] text-slate-500">Release or file version shown next to the product name.</p>
                 </div>
               </div>
 
@@ -759,42 +813,69 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-r-xl font-mono font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F5A000]/30"
                   />
                 </div>
+                <p className="text-[11px] text-slate-500">Public URL, for example /product/autocad-structural-drawings. Leave blank to generate it from the name.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700 block">Category *</label>
+                  <label className="font-bold text-slate-700 block">Brand *</label>
                   <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
+                    value={brandOptions.find((item) => item.name === brand)?.slug || brand}
+                    onChange={(event) => {
+                      if (!event.target.value) {
+                        setBrand('');
+                        setCategory('');
+                        return;
+                      }
+                      const next = brandOptions.find((item) => item.slug === event.target.value);
+                      if (!next) return;
+                      setBrand(next.name);
+                      setCategory('');
+                    }}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold focus:outline-none cursor-pointer"
                   >
-                    <option value="Softwares">Softwares</option>
-                    <option value="Excel Sheets">Excel Sheets</option>
-                    <option value="eBooks">eBooks</option>
-                    <option value="Projects">Projects</option>
-                    <option value="CAD Templates">CAD Templates</option>
-                    <option value="Calculators">Calculators</option>
+                    <option value="">{brandOptions.length === 0 ? 'Loading brands...' : 'Select brand'}</option>
+                    {brandOptions.map((item) => (
+                      <option key={item.slug} value={item.slug}>{item.name}</option>
+                    ))}
+                    {brand && !brandOptions.some((item) => item.name === brand) && (
+                      <option value={brand}>{brand}</option>
+                    )}
                   </select>
+                  <p className="text-[11px] text-slate-500">Company group, such as Autodesk. Add more under Admin → Brands.</p>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-700 block">Brand / Company *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Autodesk / Civil Software Co."
-                    value={brand}
-                    onChange={(e) => setBrand(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F5A000]/30"
-                  />
+                  <label className="font-bold text-slate-700 block">
+                    Category{categoryNotRequired ? '' : ' *'}
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(event) => setCategory(event.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold focus:outline-none cursor-pointer"
+                  >
+                    <option value="">{categoryNotRequired ? 'No category' : 'Select category'}</option>
+                    {brandCategories.map((item) => (
+                      <option key={item.slug} value={item.name}>{item.name}</option>
+                    ))}
+                    {category && !brandCategories.some((item) => item.name === category) && (
+                      <option value={category}>{category}</option>
+                    )}
+                  </select>
+                  <p className="text-[11px] text-slate-500">
+                    {categoryNotRequired
+                      ? 'This brand has no categories. You can save the product without one.'
+                      : 'Product type inside the selected brand, such as AutoCAD.'}
+                  </p>
                 </div>
               </div>
 
               {/* Status & Flags */}
               <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
-                <span className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px] block">
+                  <span className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px] block">
                   Product Status & Flags
                 </span>
+                <p className="text-[11px] text-slate-500">Active appears in the store. Draft stays hidden. Inactive is saved but not sold. Best Seller and Out of Stock control badges and checkout.</p>
                 <div className="flex flex-wrap items-center gap-6">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-slate-700">Status:</span>
@@ -1103,6 +1184,19 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   onChange={(e) => setImageUrl(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
                 />
+                {imageUrl.trim() && (
+                  <div className="mt-2 flex items-center gap-3">
+                    <img src={imageUrl.trim()} alt="" className="h-24 w-40 rounded-xl border border-slate-200 bg-slate-100 object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setPreviewSrc(imageUrl.trim())}
+                      className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Preview
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Additional Images List */}
@@ -1124,6 +1218,19 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                     + Add Image
                   </button>
                 </div>
+                {newAddImageUrl.trim() && (
+                  <div className="flex items-center gap-3">
+                    <img src={newAddImageUrl.trim()} alt="" className="h-20 w-32 rounded-xl border border-slate-200 bg-slate-100 object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setPreviewSrc(newAddImageUrl.trim())}
+                      className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Preview
+                    </button>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                   {additionalImages.map((img, idx) => (
@@ -1132,6 +1239,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                       className="relative rounded-xl border border-slate-200 bg-slate-100 h-24 overflow-hidden group"
                     >
                       <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setPreviewSrc(img)}
+                        className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-md bg-white/95 px-1.5 py-1 text-[10px] font-bold text-slate-800"
+                      >
+                        <Eye className="h-3 w-3" />
+                        Preview
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleRemoveAdditionalImage(idx)}
@@ -1653,7 +1768,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         </div>
 
         {/* Sticky Action Footer */}
-        <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex flex-wrap items-center justify-between gap-3 shrink-0 rounded-b-2xl">
+        <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex flex-wrap items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-[11px] text-slate-500 font-bold">Current Target Status:</span>
             <span
@@ -1670,6 +1785,31 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
+            {asPage && (
+              <button
+                type="button"
+                disabled={stepIndex <= 0}
+                onClick={() => {
+                  const previous = steps[stepIndex - 1];
+                  if (previous) setActiveTab(previous.id);
+                }}
+                className="px-4 py-2.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+            )}
+            {asPage && stepIndex < steps.length - 1 && (
+              <button
+                type="button"
+                onClick={() => {
+                  const next = steps[stepIndex + 1];
+                  if (next) setActiveTab(next.id);
+                }}
+                className="px-4 py-2.5 text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl cursor-pointer"
+              >
+                Next
+              </button>
+            )}
             <button
               type="button"
               onClick={onClose}
@@ -1708,6 +1848,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             </button>
           </div>
         </div>
+        </div>
 
       </div>
 
@@ -1729,6 +1870,22 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           }}
           onClose={() => setActiveIconPickerIndex(null)}
         />
+      )}
+
+      {previewSrc && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/80 p-4" onClick={() => setPreviewSrc(null)}>
+          <div className="relative max-h-[90vh] max-w-5xl" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setPreviewSrc(null)}
+              className="absolute -top-3 -right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-800 shadow"
+              aria-label="Close preview"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <img src={previewSrc} alt="Product preview" className="max-h-[85vh] max-w-full rounded-2xl bg-white object-contain" />
+          </div>
+        </div>
       )}
     </div>
   );

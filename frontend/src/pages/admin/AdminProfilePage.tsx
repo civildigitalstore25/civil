@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { AlertCircle, Check } from 'lucide-react';
 import AdminLayout from '../../components/admin/AdminLayout';
+import { adminButtonClass } from '../../components/admin/AdminPageToolbar';
 import { useAuth } from '../../hooks/useAuth';
 
 export const AdminProfilePage: React.FC = () => {
@@ -48,20 +50,20 @@ export const AdminProfilePage: React.FC = () => {
         {/* Header */}
         <div>
           <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">Administrator Account</h2>
-          <p className="text-xs text-slate-500">Update admin credentials and contact information saved in LocalStorage.</p>
+          <p className="text-xs text-slate-500">Update the name, email, and phone on this administrator account.</p>
         </div>
 
         {/* Notifications */}
         {toastMessage && (
-          <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold rounded-xl flex items-center gap-2 animate-fade-in">
-            <span>✅</span>
+          <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs font-bold text-emerald-700">
+            <Check className="h-4 w-4" />
             <span>{toastMessage}</span>
           </div>
         )}
 
         {error && (
-          <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl flex items-center gap-2 animate-fade-in">
-            <span>⚠️</span>
+          <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs font-bold text-rose-700">
+            <AlertCircle className="h-4 w-4" />
             <span>{error}</span>
           </div>
         )}
@@ -125,7 +127,7 @@ export const AdminProfilePage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="bg-[#F5A000] hover:bg-amber-600 text-white font-extrabold text-xs py-3 px-6 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer disabled:opacity-60"
+                className={`${adminButtonClass.primary} disabled:opacity-60`}
               >
                 {isSaving ? 'Saving Profile...' : 'Save Profile Changes'}
               </button>

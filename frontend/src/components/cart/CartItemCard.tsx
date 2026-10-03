@@ -95,9 +95,11 @@ export const CartItemCard: React.FC<CartItemCardProps> = ({ item, onUpdateQuanti
             <div className="text-base sm:text-lg font-extrabold text-slate-900">
               ₹{formattedPrice}
             </div>
+            {item.oldPrice > item.price && (
             <div className="text-xs text-slate-400 line-through font-medium">
               ₹{formattedOldPrice}
             </div>
+            )}
           </div>
 
           {/* Remove Button */}

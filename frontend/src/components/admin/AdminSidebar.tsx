@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import logoWhite from '../../assets/logo_white_text.png';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -11,6 +11,7 @@ interface AdminSidebarProps {
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobileOpen }) => {
   const { logout, currentUser } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -49,9 +50,19 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
       ),
     },
     {
+      key: 'banners',
+      name: 'Homepage Banners',
+      path: '/admin/banners',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      ),
+    },
+    {
       key: 'categories',
-      name: 'Categories',
-      path: '/admin/categories',
+      name: 'Brands & Categories',
+      path: '/admin/catalog',
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 11h.01M7 15h.01M11 7h8M11 11h8M11 15h8" />
@@ -115,6 +126,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
     if (!currentUser) return false;
     if (currentUser.role === 'superadmin') return true;
     if (!currentUser.permissions || currentUser.permissions.length === 0) return true;
+    if (item.key === 'categories') {
+      return currentUser.permissions.includes('brands') || currentUser.permissions.includes('categories');
+    }
+    if (item.key === 'banners' || item.key === 'draft-products') {
+      return currentUser.permissions.includes(item.key) || currentUser.permissions.includes('products');
+    }
     return currentUser.permissions.includes(item.key);
   });
 
@@ -149,7 +166,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
         <div className="overflow-hidden">
           <p className="text-xs font-bold text-white truncate">{currentUser?.name}</p>
           <span className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider">
-            {currentUser?.role === 'superadmin' ? '⚡ Super Admin' : 'Administrator'}
+            {currentUser?.role === 'superadmin' ? 'Super Admin' : 'Administrator'}
           </span>
         </div>
       </div>
@@ -163,14 +180,19 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
           <NavLink
             key={item.path}
             to={item.path}
+            end={item.path === '/admin/products'}
             onClick={() => setMobileOpen && setMobileOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
-                isActive
+            className={({ isActive }) => {
+              const onProductEditor =
+                item.path === '/admin/products' &&
+                /^\/admin\/products\/(add|.+\/edit)$/.test(pathname);
+              const active = isActive || onProductEditor;
+              return `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+                active
                   ? 'bg-[#F5A000] text-slate-950 shadow-md font-extrabold'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`
-            }
+              }`;
+            }}
           >
             {item.icon}
             <span>{item.name}</span>

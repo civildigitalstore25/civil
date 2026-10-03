@@ -4,7 +4,7 @@ import StatsCards from './StatsCards';
 
 export const HeroSection = () => {
   return (
-    <section className="relative w-full bg-[#0D1B2A] bg-grid-pattern text-white py-12 md:py-20 px-4 md:px-8 overflow-hidden min-h-[calc(100vh-160px)] flex items-center">
+    <section className="relative w-full bg-[#0D1B2A] bg-grid-pattern text-white py-14 md:py-20 px-4 md:px-8 overflow-hidden flex items-center">
       {/* Right Ambient Warm Orange Glow */}
       <div className="absolute inset-0 hero-ambient-glow pointer-events-none" />
 
@@ -16,16 +16,15 @@ export const HeroSection = () => {
           <HeroBadge />
 
           {/* Heading */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.1] mb-6">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-[1.08] mb-6">
             Download Premium{' '}
-            <span className="text-[#F5A623]">Software</span>{' '}
-            <span className="text-[#F5A623]">Bundles</span>{' '}
+            <em className="text-[#F5A623] not-italic italic">Software Bundles</em>{' '}
             for Every Discipline
           </h1>
 
           {/* Description */}
-          <p className="text-slate-300 text-base sm:text-lg max-w-2xl leading-relaxed mb-8 font-normal">
-            AutoCAD, Revit, 3ds Max, SketchUp, STAAD Pro, ETABS, Estimation Sheets, eBooks — instant digital delivery with lifetime access.
+          <p className="text-slate-300 text-base sm:text-lg max-w-md leading-relaxed mb-8 font-normal">
+            Browse the software, project files, and learning packs currently in the catalog. Instant digital delivery after purchase.
           </p>
 
           {/* CTA Buttons */}
@@ -33,7 +32,7 @@ export const HeroSection = () => {
             {/* Primary Button */}
             <a
               href="#explore"
-              className="bg-[#F5A623] hover:bg-[#FFAA00] text-white font-extrabold text-sm sm:text-base px-7 py-3.5 rounded-xl shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 transform hover:-translate-y-0.5 transition-all duration-200"
+              className="bg-[#F5A623] hover:bg-[#FFAA00] text-[#0D1B2A] font-semibold text-sm sm:text-base px-7 py-3.5 rounded-full shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2 transition-colors duration-200"
             >
               <span>Explore Full Collection</span>
               <svg className="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24">
@@ -44,7 +43,7 @@ export const HeroSection = () => {
             {/* Secondary Button */}
             <a
               href="#softwares"
-              className="bg-slate-900/60 hover:bg-slate-800/80 text-white font-bold text-sm sm:text-base px-7 py-3.5 rounded-xl border border-slate-700/80 flex items-center justify-center transition-colors duration-200"
+              className="bg-white/10 hover:bg-white/15 text-white font-semibold text-sm sm:text-base px-7 py-3.5 rounded-full border border-white/20 flex items-center justify-center transition-colors duration-200"
             >
               View Softwares
             </a>

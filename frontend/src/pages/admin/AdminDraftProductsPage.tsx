@@ -1,35 +1,36 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus,
-  Search,
   Trash2,
   Edit,
   Eye,
-  RotateCcw,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
 import AdminLayout from '../../components/admin/AdminLayout';
+import AdminPageToolbar, { adminButtonClass } from '../../components/admin/AdminPageToolbar';
+import { downloadExcel, downloadJson, exportDateStamp } from '../../utils/adminExport';
 import ConfirmModal from '../../components/admin/ConfirmModal';
-import { ProductFormModal } from '../../components/admin/ProductFormModal';
 import { ProductDetailsModal } from '../../components/admin/ProductDetailsModal';
 import { useProducts } from '../../context/ProductContext';
 import type { Product } from '../../types/product';
 
 export const AdminDraftProductsPage: React.FC = () => {
-  const { products, addProduct, updateProduct, deleteProduct } = useProducts();
+  const navigate = useNavigate();
+  const { products, deleteProduct } = useProducts();
 
   // Search & Filter State
   const [searchInput, setSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState('All brands');
+  const [selectedCategory, setSelectedCategory] = useState('All categories');
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Modal States
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [viewingProduct, setViewingProduct] = useState<Product | null>(null);
@@ -62,11 +63,13 @@ export const AdminDraftProductsPage: React.FC = () => {
         p.shortDescription?.toLowerCase().includes(q) ||
         p.longDescription?.toLowerCase().includes(q);
 
-      return matches;
-    });
-  }, [products, debouncedSearch]);
+      const brandName = p.brand || p.software || '';
+      const matchesBrand = selectedBrand === 'All brands' || brandName === selectedBrand;
+      const matchesCategory = selectedCategory === 'All categories' || p.category === selectedCategory;
 
-  const totalDraftCount = products.filter((p) => p.status === 'draft').length;
+      return matches && matchesBrand && matchesCategory;
+    });
+  }, [products, debouncedSearch, selectedBrand, selectedCategory]);
 
   const totalPages = Math.ceil(draftProducts.length / itemsPerPage) || 1;
   const paginatedDrafts = useMemo(() => {
@@ -74,11 +77,39 @@ export const AdminDraftProductsPage: React.FC = () => {
     return draftProducts.slice(start, start + itemsPerPage);
   }, [draftProducts, currentPage, itemsPerPage]);
 
+  const draftBrands = useMemo(() => {
+    const names = new Set<string>();
+    products.filter((item) => item.status === 'draft').forEach((item) => {
+      const name = item.brand || item.software;
+      if (name) names.add(name);
+    });
+    return ['All brands', ...Array.from(names)];
+  }, [products]);
+
+  const draftCategories = useMemo(() => {
+    const names = new Set<string>();
+    products.filter((item) => item.status === 'draft').forEach((item) => {
+      if (item.category) names.add(item.category);
+    });
+    return ['All categories', ...Array.from(names)];
+  }, [products]);
+
   const handleClearFilters = () => {
     setSearchInput('');
     setDebouncedSearch('');
+    setSelectedBrand('All brands');
+    setSelectedCategory('All categories');
     setCurrentPage(1);
   };
+
+  const draftExportRows = draftProducts.map((item) => ({
+    Name: item.name,
+    Version: item.version || '',
+    Brand: item.brand || item.software || '',
+    Category: item.category || '',
+    PriceINR: item.ebookPriceINR || item.price || 0,
+    CreatedAt: item.createdAt ? new Date(item.createdAt).toLocaleDateString() : '',
+  }));
 
   const handleDeleteDraftConfirm = () => {
     if (deleteConfirmDraft) {
@@ -87,76 +118,50 @@ export const AdminDraftProductsPage: React.FC = () => {
     }
   };
 
-  const handleFormSubmit = (
-    data: Partial<Product> & { name: string; price: number },
-    isDraft = false
-  ) => {
-    if (editingProduct) {
-      return updateProduct(editingProduct.id, data, isDraft);
-    } else {
-      return addProduct(data, isDraft);
-    }
-  };
-
   return (
     <AdminLayout title="Draft Products">
       <div className="space-y-6">
 
-        {/* Top Header Card */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-                  Draft Products Catalog
-                </h2>
-                <span className="px-2.5 py-0.5 bg-purple-100 text-purple-800 font-extrabold text-xs rounded-full">
-                  {totalDraftCount} total drafts
-                </span>
-              </div>
-              <p className="text-xs text-slate-500">
-                Work-in-progress product drafts. Save drafts for later or publish them to the active store.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingProduct(null);
-                  setIsFormModalOpen(true);
-                }}
-                className="bg-purple-700 hover:bg-purple-800 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add New Draft</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Search & Clear Filters */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-100">
-            <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                placeholder="Search draft products..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/30 transition-all"
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={handleClearFilters}
-              className="p-2 text-slate-500 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shrink-0"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Clear Filters</span>
+        <AdminPageToolbar
+          title="Draft products"
+          description="Unpublished products. Filter by brand or category, then export the current list."
+          count={draftProducts.length}
+          countLabel="drafts"
+          searchValue={searchInput}
+          onSearchChange={setSearchInput}
+          searchPlaceholder="Search drafts"
+          filters={[
+            {
+              id: 'brand',
+              ariaLabel: 'Filter drafts by brand',
+              value: selectedBrand,
+              onChange: (value) => {
+                setSelectedBrand(value);
+                setCurrentPage(1);
+              },
+              options: draftBrands.map((item) => ({ value: item, label: item })),
+            },
+            {
+              id: 'category',
+              ariaLabel: 'Filter drafts by category',
+              value: selectedCategory,
+              onChange: (value) => {
+                setSelectedCategory(value);
+                setCurrentPage(1);
+              },
+              options: draftCategories.map((item) => ({ value: item, label: item })),
+            },
+          ]}
+          onClear={handleClearFilters}
+          onExportExcel={() => downloadExcel(draftExportRows, 'Drafts', `drafts_${exportDateStamp()}`)}
+          onExportJson={() => downloadJson(draftExportRows, `drafts_${exportDateStamp()}`)}
+          actions={
+            <button type="button" onClick={() => navigate('/admin/products/add')} className={adminButtonClass.primary}>
+              <Plus className="h-4 w-4" />
+              Add product
             </button>
-          </div>
-        </div>
+          }
+        />
 
         {/* Draft Table Card */}
         <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden">
@@ -263,10 +268,7 @@ export const AdminDraftProductsPage: React.FC = () => {
 
                             <button
                               type="button"
-                              onClick={() => {
-                                setEditingProduct(draft);
-                                setIsFormModalOpen(true);
-                              }}
+                              onClick={() => navigate(`/admin/products/${draft.id}/edit`)}
                               className="px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 font-bold text-[11px] rounded-lg cursor-pointer flex items-center gap-1"
                               title="Edit & Publish Draft"
                             >
@@ -350,16 +352,6 @@ export const AdminDraftProductsPage: React.FC = () => {
         </div>
 
         {/* Modals */}
-        <ProductFormModal
-          isOpen={isFormModalOpen}
-          onClose={() => {
-            setIsFormModalOpen(false);
-            setEditingProduct(null);
-          }}
-          product={editingProduct}
-          onSubmit={handleFormSubmit}
-        />
-
         <ProductDetailsModal
           isOpen={isDetailsModalOpen}
           onClose={() => {
@@ -367,10 +359,7 @@ export const AdminDraftProductsPage: React.FC = () => {
             setViewingProduct(null);
           }}
           product={viewingProduct}
-          onEdit={(prod) => {
-            setEditingProduct(prod);
-            setIsFormModalOpen(true);
-          }}
+          onEdit={(prod) => navigate(`/admin/products/${prod.id}/edit`)}
         />
 
         <ConfirmModal

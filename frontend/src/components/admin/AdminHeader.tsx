@@ -1,4 +1,5 @@
 import React from 'react';
+import { ExternalLink } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { Link } from 'react-router-dom';
 
@@ -36,7 +37,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title = 'Dashboard', o
           className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-[#F5A000] hover:bg-amber-100 border border-amber-200 rounded-lg text-xs font-bold transition-colors"
         >
           <span>Storefront</span>
-          <span className="text-xs">↗</span>
+          <ExternalLink className="h-3.5 w-3.5" />
         </Link>
 
         <div className="flex items-center gap-2.5 pl-2 border-l border-slate-200">
@@ -46,7 +47,7 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ title = 'Dashboard', o
           <div className="hidden md:block text-left leading-tight">
             <p className="text-xs font-bold text-slate-900">{currentUser?.name}</p>
             <p className="text-[10px] text-slate-500 font-medium">
-              {currentUser?.role === 'superadmin' ? '⚡ Super Admin' : 'Administrator'}
+              {currentUser?.role === 'superadmin' ? 'Super Admin' : 'Administrator'}
             </p>
           </div>
         </div>

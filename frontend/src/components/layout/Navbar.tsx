@@ -33,58 +33,10 @@ export const Navbar = () => {
           </Link>
 
           <Link
-            to="/autocad-software/"
-            className={`py-4 shrink-0 transition-colors ${
-              location.pathname === '/autocad-software/' || location.pathname === '/autocad-software'
-                ? 'text-[#F5A623] font-bold'
-                : 'text-slate-200 hover:text-[#F5A623]'
-            }`}
+            to="/#softwares"
+            className="py-4 shrink-0 text-slate-200 hover:text-[#F5A623] transition-colors"
           >
-            AutoCAD
-          </Link>
-
-          <Link
-            to="/revit/"
-            className={`py-4 shrink-0 transition-colors ${
-              location.pathname === '/revit/' || location.pathname === '/revit'
-                ? 'text-[#F5A623] font-bold'
-                : 'text-slate-200 hover:text-[#F5A623]'
-            }`}
-          >
-            Revit
-          </Link>
-
-          <Link
-            to="/excel-sheets/"
-            className={`py-4 shrink-0 transition-colors ${
-              location.pathname === '/excel-sheets/' || location.pathname === '/excel-sheets'
-                ? 'text-[#F5A623] font-bold'
-                : 'text-slate-200 hover:text-[#F5A623]'
-            }`}
-          >
-            Excel Sheets
-          </Link>
-
-          <Link
-            to="/ebooks/"
-            className={`py-4 shrink-0 transition-colors ${
-              location.pathname === '/ebooks/' || location.pathname === '/ebooks'
-                ? 'text-[#F5A623] font-bold'
-                : 'text-slate-200 hover:text-[#F5A623]'
-            }`}
-          >
-            eBooks
-          </Link>
-
-          <Link
-            to="/projects/"
-            className={`py-4 shrink-0 transition-colors ${
-              location.pathname === '/projects/' || location.pathname === '/projects'
-                ? 'text-[#F5A623] font-bold'
-                : 'text-slate-200 hover:text-[#F5A623]'
-            }`}
-          >
-            Projects
+            Categories
           </Link>
 
           <a

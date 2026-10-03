@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getProducts,
+  getProductBySlug,
   getProductById,
   createProduct,
   updateProduct,
@@ -15,6 +16,7 @@ const router = Router();
 
 // Public routes for product viewing
 router.get('/', getProducts);
+router.get('/slug/:slug', getProductBySlug);
 router.get('/:id', getProductById);
 
 // Admin protected routes
