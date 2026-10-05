@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import type { CartItem, AppliedCoupon, CartSummary } from '../types/cart';
 import type { Product } from '../types/product';
-import { VALID_COUPONS } from '../data/cartData';
 import { cartService } from '../services/cartService';
+import { couponService } from '../services/couponService';
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -77,16 +77,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const applyCoupon = (code: string): { success: boolean; message: string } => {
-    const cleanCode = code.trim().toUpperCase();
-    if (!cleanCode) {
-      return { success: false, message: 'Please enter a coupon code.' };
+    const items = cartItems.map((item) => ({
+      productId: item.productId,
+      price: item.price,
+      quantity: item.quantity,
+    }));
+    const result = couponService.validateCouponCode(code, items);
+    if (result.valid && result.coupon) {
+      setAppliedCoupon({
+        code: result.coupon.code,
+        discountPercent: result.coupon.discountType === 'percentage' ? result.coupon.discountValue : undefined,
+        discountAmount: result.coupon.discountType === 'fixed' ? result.coupon.discountValue : undefined,
+        description: result.coupon.discountType === 'percentage'
+          ? `${result.coupon.discountValue}% Off Applied!`
+          : `₹${result.coupon.discountValue} Off Applied!`,
+      });
+      return { success: true, message: result.message };
     }
-    const coupon = VALID_COUPONS[cleanCode];
-    if (coupon) {
-      setAppliedCoupon(coupon);
-      return { success: true, message: `Coupon "${cleanCode}" applied successfully!` };
-    }
-    return { success: false, message: 'Invalid coupon code. Try CIVIL10 or SAVE200.' };
+    return { success: false, message: result.message };
   };
 
   const removeCoupon = () => {
