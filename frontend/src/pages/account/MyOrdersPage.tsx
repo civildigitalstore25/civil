@@ -13,6 +13,7 @@ import type { Order } from '../../types/order';
 export const MyOrdersPage: React.FC = () => {
   const { currentUser } = useAuth();
   const [serverOrders, setServerOrders] = useState<Order[]>([]);
+  const [openOrderId, setOpenOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,7 +85,11 @@ export const MyOrdersPage: React.FC = () => {
                 className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4 transition-all hover:shadow-md"
               >
                 {/* Order Top Summary Bar */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 pb-4 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setOpenOrderId((current) => (current === order.id ? null : order.id))}
+                  className="flex w-full cursor-pointer flex-col items-start gap-2 border-b border-slate-100 pb-4 text-left text-xs sm:flex-row sm:items-center sm:justify-between"
+                >
                   <div>
                     <span className="font-extrabold text-slate-900 text-sm">{order.id}</span>
                     <span className="text-slate-400 font-medium ml-3">
@@ -94,6 +99,9 @@ export const MyOrdersPage: React.FC = () => {
                         month: 'short',
                         year: 'numeric',
                       })}
+                    </span>
+                    <span className="mt-1 block text-[11px] font-bold text-[#D97706]">
+                      {openOrderId === order.id ? 'Hide details' : 'View full details'}
                     </span>
                   </div>
 
@@ -114,7 +122,47 @@ export const MyOrdersPage: React.FC = () => {
                       {order.status}
                     </span>
                   </div>
-                </div>
+                </button>
+
+                {openOrderId === order.id && (
+                  <div className="grid grid-cols-1 gap-4 rounded-2xl bg-slate-50 p-4 text-xs sm:grid-cols-2">
+                    <div>
+                      <p className="font-bold uppercase tracking-wide text-slate-400">Customer</p>
+                      <p className="mt-1 font-bold text-slate-900">{order.customerName}</p>
+                      <p className="text-slate-600">{order.customerEmail}</p>
+                      <p className="text-slate-600">{order.customerPhone}</p>
+                    </div>
+                    <div>
+                      <p className="font-bold uppercase tracking-wide text-slate-400">Billing address</p>
+                      <p className="mt-1 font-semibold text-slate-800">{order.shippingAddress || 'Not provided'}</p>
+                      <p className="mt-3 font-bold uppercase tracking-wide text-slate-400">Payment</p>
+                      <p className="mt-1 font-semibold text-slate-800">{order.paymentMethod}</p>
+                      {order.phonepeOrderId && (
+                        <p className="text-slate-500">PhonePe order {order.phonepeOrderId}</p>
+                      )}
+                    </div>
+                    <div className="sm:col-span-2 space-y-1.5 border-t border-slate-200 pt-3 font-semibold text-slate-600">
+                      <div className="flex justify-between">
+                        <span>Subtotal</span>
+                        <span className="font-bold text-slate-900">₹{order.subtotal.toLocaleString('en-IN')}</span>
+                      </div>
+                      {(order.couponDiscount || 0) > 0 && (
+                        <div className="flex justify-between text-emerald-600">
+                          <span>Coupon {order.couponCode ? `(${order.couponCode})` : ''}</span>
+                          <span className="font-bold">-₹{(order.couponDiscount || 0).toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span>GST (18%)</span>
+                        <span className="font-bold text-slate-900">₹{order.gst.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex justify-between border-t border-slate-200 pt-2">
+                        <span className="font-extrabold text-slate-900">Total paid</span>
+                        <span className="font-extrabold text-slate-900">₹{order.totalAmount.toLocaleString('en-IN')}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Items List */}
                 <div className="space-y-3">
