@@ -20,8 +20,12 @@ export interface Order {
   items: OrderItem[];
   subtotal: number;
   gst: number;
+  couponCode?: string;
+  couponDiscount?: number;
   totalAmount: number;
   status: OrderStatus;
+  paymentState?: 'PENDING' | 'COMPLETED' | 'FAILED';
   paymentMethod: string;
+  phonepeOrderId?: string;
   createdAt: string;
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AnnouncementBar from '../../components/layout/AnnouncementBar';
 import Header from '../../components/layout/Header';
@@ -7,12 +7,33 @@ import Footer from '../../components/layout/Footer';
 import WhatsAppButton from '../../components/common/WhatsAppButton';
 import { useAuth } from '../../hooks/useAuth';
 import { orderService } from '../../services/orderService';
+import { paymentService } from '../../services/paymentService';
+import type { Order } from '../../types/order';
 
 export const MyOrdersPage: React.FC = () => {
   const { currentUser } = useAuth();
-  const userOrders = currentUser
+  const [serverOrders, setServerOrders] = useState<Order[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    paymentService
+      .myOrders()
+      .then((orders) => {
+        if (!cancelled) setServerOrders(orders);
+      })
+      .catch(() => {
+        if (!cancelled) setServerOrders([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser?.id]);
+
+  const localOrders = currentUser
     ? orderService.getUserOrders(currentUser.id, currentUser.email)
     : [];
+  const seen = new Set(serverOrders.map((order) => order.id));
+  const userOrders = [...serverOrders, ...localOrders.filter((order) => !seen.has(order.id))];
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -76,10 +97,15 @@ export const MyOrdersPage: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
                     <span className="font-extrabold text-slate-900 text-sm">
                       Total: ₹{order.totalAmount.toLocaleString('en-IN')}
                     </span>
+                    {order.paymentState === 'COMPLETED' && (
+                      <span className="inline-block text-[10px] font-extrabold uppercase px-3 py-0.5 rounded-full border bg-emerald-100 text-emerald-800 border-emerald-300">
+                        Payment completed
+                      </span>
+                    )}
                     <span
                       className={`inline-block text-[10px] font-extrabold uppercase px-3 py-0.5 rounded-full border ${getStatusBadge(
                         order.status

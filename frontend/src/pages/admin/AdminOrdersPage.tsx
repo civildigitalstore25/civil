@@ -1,22 +1,54 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import AdminPageToolbar from '../../components/admin/AdminPageToolbar';
 import { orderService } from '../../services/orderService';
+import { paymentService } from '../../services/paymentService';
 import type { Order, OrderStatus } from '../../types/order';
 import { downloadExcel, downloadJson, exportDateStamp } from '../../utils/adminExport';
 
 export const AdminOrdersPage: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>(() => orderService.getOrders());
+  const [serverOrderIds, setServerOrderIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
 
-  const refreshOrders = () => {
-    setOrders(orderService.getOrders());
+  const mergeOrders = (remoteOrders: Order[]) => {
+    const remoteIds = new Set(remoteOrders.map((order) => order.id));
+    const localOnly = orderService.getOrders().filter((order) => !remoteIds.has(order.id));
+    setServerOrderIds(remoteIds);
+    setOrders([...remoteOrders, ...localOnly]);
   };
 
+  useEffect(() => {
+    let cancelled = false;
+    paymentService
+      .adminOrders()
+      .then((remoteOrders) => {
+        if (!cancelled) mergeOrders(remoteOrders);
+      })
+      .catch(() => {
+        if (!cancelled) setOrders(orderService.getOrders());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
+    if (serverOrderIds.has(orderId)) {
+      paymentService
+        .updateStatus(orderId, newStatus)
+        .then((updated) => {
+          setOrders((current) => current.map((order) => (order.id === orderId ? updated : order)));
+        })
+        .catch(() => undefined);
+      return;
+    }
+
     orderService.updateOrderStatus(orderId, newStatus);
-    refreshOrders();
+    setOrders((current) =>
+      current.map((order) => (order.id === orderId ? { ...order, status: newStatus } : order))
+    );
   };
 
   const filteredOrders = orders.filter((o) => {
@@ -56,6 +88,7 @@ export const AdminOrdersPage: React.FC = () => {
     Total: order.totalAmount,
     Status: order.status,
     Payment: order.paymentMethod,
+    Paid: order.paymentState === 'COMPLETED' ? 'Completed' : order.paymentState === 'FAILED' ? 'Failed' : 'Pending',
   }));
 
   return (
@@ -123,6 +156,11 @@ export const AdminOrdersPage: React.FC = () => {
                       <span className="inline-block mt-1 text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
                         {order.paymentMethod}
                       </span>
+                      {order.paymentState === 'COMPLETED' && (
+                        <span className="inline-block mt-1 ml-1 text-[10px] font-extrabold uppercase text-emerald-800 bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded">
+                          Paid · Completed
+                        </span>
+                      )}
                     </td>
 
                     {/* Customer Details */}
@@ -172,7 +210,7 @@ export const AdminOrdersPage: React.FC = () => {
 
                         <div className="pt-1">
                           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-                            Change Status:
+                            Order status
                           </label>
                           <select
                             value={order.status}

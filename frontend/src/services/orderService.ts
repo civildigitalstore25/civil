@@ -24,6 +24,20 @@ export const orderService = {
     return this.getOrders().find((o) => o.id === id);
   },
 
+  recordVerifiedOrder(order: Order): Order {
+    const orders = this.getOrders();
+    const existing = orders.find((item) => item.id === order.id);
+    if (existing) {
+      const updated = orders.map((item) => (item.id === order.id ? order : item));
+      this.saveOrders(updated);
+      return order;
+    }
+
+    const updated = [order, ...orders];
+    this.saveOrders(updated);
+    return order;
+  },
+
   createOrder(data: Omit<Order, 'id' | 'createdAt'>): Order {
     const orders = this.getOrders();
     const newOrder: Order = {

@@ -141,25 +141,27 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({ product 
             <div className="flex items-center gap-3">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Quantity</span>
               <div className="flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5">
-                <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))} className="h-7 w-7 rounded-md border border-slate-200 bg-white text-sm font-semibold">-</button>
+                <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))} className="h-7 w-7 cursor-pointer rounded-md border border-slate-200 bg-white text-sm font-semibold">-</button>
                 <span className="w-8 text-center text-xs font-bold">{quantity}</span>
-                <button type="button" onClick={() => setQuantity((value) => value + 1)} className="h-7 w-7 rounded-md border border-slate-200 bg-white text-sm font-semibold">+</button>
+                <button type="button" onClick={() => setQuantity((value) => value + 1)} className="h-7 w-7 cursor-pointer rounded-md border border-slate-200 bg-white text-sm font-semibold">+</button>
               </div>
             </div>
-            <a
-              href={`https://wa.me/918807423228?text=${encodeURIComponent(`Hi, I am interested in ${product.name}`)}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#22C55E] py-2.5 text-sm font-bold text-white"
-            >
-              Order on WhatsApp
-            </a>
-            <button type="button" onClick={handleAddToCart} className={`w-full rounded-lg py-3 text-sm font-bold text-white ${addedToCart ? 'bg-emerald-600' : 'bg-gradient-to-r from-[#F5A623] to-[#FFAA00]'}`}>
-              {addedToCart ? 'Added to cart' : selected.priceINR > 0 ? 'Add to cart' : 'Get it free'}
-            </button>
-            <button type="button" onClick={() => { purchase(); navigate('/checkout'); }} className="w-full rounded-lg border border-slate-300 bg-white py-2.5 text-sm font-bold text-slate-900">
-              Buy it now
-            </button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button type="button" onClick={() => { purchase(); navigate('/checkout'); }} className="w-full cursor-pointer rounded-lg border border-slate-300 bg-white px-2 py-2.5 text-center text-sm font-bold text-slate-900 sm:flex-1">
+                Buy now
+              </button>
+              <button type="button" onClick={handleAddToCart} className={`w-full cursor-pointer rounded-lg px-2 py-2.5 text-center text-sm font-bold text-white sm:flex-1 ${addedToCart ? 'bg-emerald-600' : 'bg-gradient-to-r from-[#F5A623] to-[#FFAA00]'}`}>
+                {addedToCart ? 'Added to cart' : selected.priceINR > 0 ? 'Add to cart' : 'Get it free'}
+              </button>
+              <a
+                href={`https://wa.me/918807423228?text=${encodeURIComponent(`Hi, I am interested in ${product.name}`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex w-full cursor-pointer items-center justify-center rounded-lg bg-[#22C55E] px-2 py-2.5 text-center text-sm font-bold text-white sm:flex-1"
+              >
+                Order on WhatsApp
+              </a>
+            </div>
           </>
         )
       )}

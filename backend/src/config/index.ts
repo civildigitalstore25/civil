@@ -37,5 +37,11 @@ export const config = {
   superAdminEmail: required('SUPERADMIN_EMAIL'),
   superAdminPassword: required('SUPERADMIN_PASSWORD'),
   isProduction: process.env.NODE_ENV === 'production',
+  phonepe: {
+    env: process.env.PHONEPE_ENV?.trim() === 'production' ? 'production' : 'sandbox',
+    clientId: process.env.PHONEPE_CLIENT_ID?.trim() ?? '',
+    clientSecret: process.env.PHONEPE_CLIENT_SECRET?.trim() ?? '',
+    clientVersion: process.env.PHONEPE_CLIENT_VERSION?.trim() || '1',
+  },
 };
 

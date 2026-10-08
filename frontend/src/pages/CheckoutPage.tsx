@@ -7,19 +7,17 @@ import Footer from '../components/layout/Footer';
 import WhatsAppButton from '../components/common/WhatsAppButton';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../hooks/useAuth';
-import { orderService } from '../services/orderService';
-import type { OrderItem } from '../types/order';
+import { paymentService } from '../services/paymentService';
 
 export const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
-  const { cartItems, summary, clearCart } = useCart();
+  const { cartItems, summary, appliedCoupon } = useCart();
   const { currentUser } = useAuth();
 
   const [customerName, setCustomerName] = useState(currentUser?.name || '');
   const [customerEmail, setCustomerEmail] = useState(currentUser?.email || '');
   const [customerPhone, setCustomerPhone] = useState(currentUser?.phone || '');
   const [shippingAddress, setShippingAddress] = useState('123 Civil Digital Hub, India');
-  const [paymentMethod, setPaymentMethod] = useState('UPI / QR Code');
 
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -52,7 +50,7 @@ export const CheckoutPage: React.FC = () => {
     );
   }
 
-  const handleCheckoutSubmit = (e: React.FormEvent) => {
+  const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!customerName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
@@ -63,36 +61,29 @@ export const CheckoutPage: React.FC = () => {
     setError(null);
     setIsProcessing(true);
 
-    const orderItems: OrderItem[] = cartItems.map((item) => ({
-      id: item.id,
-      productId: item.productId,
-      title: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      image: item.image,
-      fileFormat: item.format,
-    }));
+    try {
+      const payment = await paymentService.initiate({
+        customerName: customerName.trim(),
+        customerEmail: customerEmail.trim(),
+        customerPhone: customerPhone.trim(),
+        shippingAddress: shippingAddress.trim(),
+        couponCode: appliedCoupon?.code,
+        items: cartItems.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        })),
+      });
 
-    // Create Order object in LocalStorage
-    orderService.createOrder({
-      userId: currentUser?.id || 'guest_user',
-      customerName: customerName.trim(),
-      customerEmail: customerEmail.trim(),
-      customerPhone: customerPhone.trim(),
-      shippingAddress: shippingAddress.trim(),
-      items: orderItems,
-      subtotal: summary.subtotal,
-      gst: summary.gst,
-      totalAmount: summary.totalPayable,
-      status: 'Completed', // Instant digital download auto completes
-      paymentMethod,
-    });
+      if (payment.freeCheckout && payment.merchantOrderId) {
+        navigate(`/payment/result/${payment.merchantOrderId}`);
+        return;
+      }
 
-    setTimeout(() => {
-      clearCart();
+      window.location.assign(payment.redirectUrl || '/checkout');
+    } catch (checkoutError) {
+      setError(checkoutError instanceof Error ? checkoutError.message : 'Unable to start PhonePe payment.');
       setIsProcessing(false);
-      navigate('/account/orders');
-    }, 1200);
+    }
   };
 
   return (
@@ -110,7 +101,7 @@ export const CheckoutPage: React.FC = () => {
           <div className="border-b border-slate-200 pb-4">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Checkout Order</h1>
             <p className="text-xs text-slate-500">
-              Frontend demo checkout. Orders are saved into <code className="bg-amber-100 px-1 rounded text-amber-900">civil_orders</code> LocalStorage key.
+              Pay securely with PhonePe. UPI, cards, and net banking open on the PhonePe checkout page.
             </p>
           </div>
 
@@ -183,37 +174,15 @@ export const CheckoutPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Payment Method Selector */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
+              <div className="bg-white border border-[#F5A623] rounded-3xl p-6 shadow-xs space-y-3">
                 <h3 className="text-base font-extrabold text-slate-900 border-b border-slate-100 pb-2">
-                  2. Select Payment Mode (Frontend Demo)
+                  2. Pay with PhonePe
                 </h3>
-
-                <div className="space-y-2">
-                  {[
-                    'UPI / GooglePay / PhonePe',
-                    'Credit / Debit Card',
-                    'Net Banking',
-                    'Instant Digital Access (Free Demo)',
-                  ].map((method) => (
-                    <label
-                      key={method}
-                      className={`flex items-center gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                        paymentMethod === method
-                          ? 'border-[#F5A623] bg-amber-50/50 font-bold text-slate-900'
-                          : 'border-slate-200 bg-white font-medium text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        checked={paymentMethod === method}
-                        onChange={() => setPaymentMethod(method)}
-                        className="w-4 h-4 text-[#F5A623] accent-[#F5A623]"
-                      />
-                      <span className="text-xs">{method}</span>
-                    </label>
-                  ))}
+                <p className="text-xs font-semibold text-slate-600">
+                  You will be redirected to PhonePe&apos;s secure sandbox checkout. The order is confirmed only after PhonePe reports a successful payment.
+                </p>
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-slate-800">
+                  PhonePe · UPI, cards, and net banking
                 </div>
               </div>
 
@@ -275,11 +244,11 @@ export const CheckoutPage: React.FC = () => {
                 disabled={isProcessing}
                 className="w-full bg-[#F5A623] hover:bg-[#e0951a] text-white font-extrabold text-sm py-4 px-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-60"
               >
-                {isProcessing ? 'Processing Order...' : 'Complete Purchase & Get Instant Download →'}
+                {isProcessing ? 'Redirecting to PhonePe...' : 'Pay with PhonePe →'}
               </button>
 
               <div className="text-center text-[11px] text-slate-400 font-medium">
-                🔒 256-bit encrypted secure LocalStorage checkout.
+                🔒 Amount is calculated on the server and confirmed with PhonePe.
               </div>
             </div>
 
