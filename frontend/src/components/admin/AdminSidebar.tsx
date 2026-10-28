@@ -137,12 +137,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
 
   return (
     <aside
-      className={`w-64 bg-[#0B1B2E] text-slate-300 flex flex-col h-full shadow-2xl transition-all duration-300 z-40 ${
+      className={`fixed inset-y-0 left-0 z-40 w-64 h-screen h-[100dvh] bg-[#0B1B2E] text-slate-300 flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${
         mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}
     >
       {/* Brand Header with Logo */}
-      <div className="p-5 border-b border-slate-800 flex items-center justify-between">
+      <div className="p-5 border-b border-slate-800 flex items-center justify-between shrink-0">
         <Link to="/admin/dashboard" className="flex items-center gap-3">
           <img src={logoWhite} alt="Civil Digital Store Admin Logo" className="h-9 w-auto object-contain" />
         </Link>
@@ -159,7 +159,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
       </div>
 
       {/* Admin Info Banner */}
-      <div className="px-5 py-4 bg-slate-900/60 border-b border-slate-800 flex items-center gap-3">
+      <div className="px-5 py-4 bg-slate-900/60 border-b border-slate-800 flex items-center gap-3 shrink-0">
         <div className="w-9 h-9 rounded-full bg-[#F5A000] text-slate-950 font-extrabold flex items-center justify-center text-sm shadow-md">
           {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'A'}
         </div>
@@ -201,7 +201,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
       </nav>
 
       {/* Bottom Footer Actions */}
-      <div className="p-3 border-t border-slate-800 space-y-1">
+      <div className="p-3 border-t border-slate-800 space-y-1 shrink-0">
         <Link
           to="/"
           className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-emerald-400 hover:bg-emerald-950/40 hover:text-emerald-300 transition-all duration-200"
