@@ -265,7 +265,12 @@ export const SoftwareCollection: React.FC = () => {
 
             {visibleProducts.length === 0 ? (
               <div className="rounded-lg bg-slate-50 py-12 text-center text-slate-500">
-                <p className="text-lg">No products available in this category</p>
+                <p className="text-lg font-bold text-slate-700">No products available</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  {products.length === 0
+                    ? 'There are currently no products in the catalog.'
+                    : 'No products available in this category'}
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-6">

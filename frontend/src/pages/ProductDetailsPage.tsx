@@ -36,8 +36,8 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ product:
         </header>
         <div className="max-w-md mx-auto py-20 text-center space-y-4 px-4">
           <div className="text-4xl">🔍</div>
-          <h2 className="text-xl font-bold text-slate-900">Product Not Found</h2>
-          <p className="text-xs text-slate-500">The product you are looking for may have been moved or removed.</p>
+          <h2 className="text-xl font-bold text-slate-900">No product available</h2>
+          <p className="text-xs text-slate-500">The product you are looking for is not available or has been removed.</p>
           <button
             onClick={() => navigate('/products')}
             className="px-5 py-2.5 bg-[#F5A000] text-white font-bold text-xs rounded-xl shadow-md cursor-pointer"

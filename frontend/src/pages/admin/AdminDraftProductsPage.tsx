@@ -292,7 +292,7 @@ export const AdminDraftProductsPage: React.FC = () => {
                 ) : (
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
-                      No draft products found.
+                      No draft products available.
                     </td>
                   </tr>
                 )}

@@ -1,11 +1,10 @@
 import { STORAGE_KEYS, storageService } from './storageService';
 import type { CustomerReview } from '../types/product';
-import { MOCK_REVIEWS } from '../data/reviews';
 import { generateId } from '../utils/generateId';
 
 export const reviewService = {
   getReviews(): CustomerReview[] {
-    return storageService.getItem<CustomerReview[]>(STORAGE_KEYS.REVIEWS, MOCK_REVIEWS);
+    return storageService.getItem<CustomerReview[]>(STORAGE_KEYS.REVIEWS, []);
   },
 
   saveReviews(reviews: CustomerReview[]): void {

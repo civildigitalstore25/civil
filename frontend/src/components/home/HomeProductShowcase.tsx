@@ -152,8 +152,8 @@ export const HomeProductShowcase: React.FC = () => {
         ) : (
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-12 text-center space-y-3">
             <div className="text-3xl">📦</div>
-            <h3 className="text-base font-bold text-slate-900">No active products found in this category</h3>
-            <p className="text-xs text-slate-500">Products assigned through Admin will appear here automatically.</p>
+            <h3 className="text-base font-bold text-slate-900">{activeProducts.length === 0 ? 'No products available' : 'No products available in this category'}</h3>
+            <p className="text-xs text-slate-500">{activeProducts.length === 0 ? 'Products added in the backend will appear here.' : 'Try selecting another category tab above.'}</p>
             <button
               type="button"
               onClick={() => setActiveTab('all')}

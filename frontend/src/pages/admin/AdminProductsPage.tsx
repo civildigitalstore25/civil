@@ -550,7 +550,7 @@ export const AdminProductsPage: React.FC = () => {
                 ) : (
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
-                      No published products match your current search or filter criteria.
+                      {products.length === 0 ? 'No products available. Click "Add Product" above to add products to your store.' : 'No published products match your current search or filter criteria.'}
                     </td>
                   </tr>
                 )}

@@ -305,11 +305,12 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({ category
               </div>
             ) : (
               <div className="w-full bg-white border border-slate-200 rounded-2xl p-12 text-center space-y-4 shadow-sm">
-                <div className="text-4xl">🔍</div>
-                <h3 className="text-lg font-bold text-slate-900">No products found matching your filters</h3>
+                <div className="text-4xl">{products.length === 0 ? '📦' : '🔍'}</div>
+                <h3 className="text-lg font-bold text-slate-900">{products.length === 0 ? 'No products available' : 'No products found matching your filters'}</h3>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  Try clearing your filter selection or searching for a different software keyword.
+                  {products.length === 0 ? 'There are currently no products available in the store. Please check back later.' : 'Try clearing your filter selection or searching for a different software keyword.'}
                 </p>
+                {products.length > 0 && (
                 <button
                   type="button"
                   onClick={handleClearFilters}
@@ -317,6 +318,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({ category
                 >
                   Clear All Filters
                 </button>
+                )}
               </div>
             )}
           </div>

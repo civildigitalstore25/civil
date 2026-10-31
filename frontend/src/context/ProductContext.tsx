@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import type { Product } from '../types/product';
-import { productService } from '../services/productService';
 import { productApi } from '../services/productApi';
 
 interface ProductContextType {
   products: Product[];
+  loading: boolean;
   refreshProducts: () => Promise<void>;
   getProductBySlug: (slug: string) => Product | undefined;
   getProductById: (id: string) => Product | undefined;
@@ -19,21 +19,21 @@ interface ProductContextType {
 const ProductContext = createContext<ProductContextType | undefined>(undefined);
 
 export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [products, setProducts] = useState<Product[]>(() => productService.getProducts());
-
-  const replaceProducts = useCallback((next: Product[]) => {
-    productService.saveProducts(next);
-    setProducts(next);
-  }, []);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const refreshProducts = useCallback(async () => {
+    setLoading(true);
     try {
       const next = await productApi.list();
-      replaceProducts(next);
-    } catch {
-      setProducts(productService.getProducts());
+      setProducts(next);
+    } catch (error) {
+      console.error('Failed to load products from backend:', error);
+      setProducts([]);
+    } finally {
+      setLoading(false);
     }
-  }, [replaceProducts]);
+  }, []);
 
   useEffect(() => {
     void refreshProducts();
@@ -45,6 +45,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return products.find(
         (p) =>
           p.slug.toLowerCase() === normalized ||
+          p.id.toLowerCase() === normalized ||
           p.aliases?.some((alias) => alias.toLowerCase() === normalized)
       );
     },
@@ -62,15 +63,14 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const result = await productApi.create(data, isDraft);
       if (result.success && result.product) {
-        setProducts((current) => {
-          const next = [result.product as Product, ...current];
-          productService.saveProducts(next);
-          return next;
-        });
+        setProducts((current) => [result.product as Product, ...current]);
       }
       return result;
-    } catch {
-      return productService.addProduct(data, isDraft);
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create product'
+      };
     }
   }, []);
 
@@ -78,15 +78,16 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const result = await productApi.update(id, data, isDraft);
       if (result.success && result.product) {
-        setProducts((current) => {
-          const next = current.map((item) => (item.id === id || item._id === id ? (result.product as Product) : item));
-          productService.saveProducts(next);
-          return next;
-        });
+        setProducts((current) =>
+          current.map((item) => (item.id === id || item._id === id ? (result.product as Product) : item))
+        );
       }
       return result;
-    } catch {
-      return productService.updateProduct(id, data, isDraft);
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update product'
+      };
     }
   }, []);
 
@@ -94,15 +95,14 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const result = await productApi.remove(id);
       if (result.success) {
-        setProducts((current) => {
-          const next = current.filter((item) => item.id !== id && item._id !== id);
-          productService.saveProducts(next);
-          return next;
-        });
+        setProducts((current) => current.filter((item) => item.id !== id && item._id !== id));
       }
       return result;
-    } catch {
-      return productService.deleteProduct(id);
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to delete product'
+      };
     }
   }, []);
 
@@ -110,44 +110,37 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     try {
       const result = await productApi.bulkRemove(ids);
       if (result.success) {
-        setProducts((current) => {
-          const idSet = new Set(ids);
-          const next = current.filter((item) => !idSet.has(item.id) && !idSet.has(item._id || ''));
-          productService.saveProducts(next);
-          return next;
-        });
+        const idSet = new Set(ids);
+        setProducts((current) => current.filter((item) => !idSet.has(item.id) && !idSet.has(item._id || '')));
       }
       return result;
     } catch {
-      return productService.bulkDeleteProducts(ids);
+      return { success: false, count: 0 };
     }
   }, []);
 
   const toggleBestSeller = useCallback((id: string) => {
     void productApi.toggle(id, 'bestseller').then((product) => {
       if (!product) return;
-      setProducts((current) => {
-        const next = current.map((item) => (item.id === id || item._id === id ? product : item));
-        productService.saveProducts(next);
-        return next;
-      });
+      setProducts((current) =>
+        current.map((item) => (item.id === id || item._id === id ? product : item))
+      );
     });
   }, []);
 
   const toggleOutOfStock = useCallback((id: string) => {
     void productApi.toggle(id, 'outofstock').then((product) => {
       if (!product) return;
-      setProducts((current) => {
-        const next = current.map((item) => (item.id === id || item._id === id ? product : item));
-        productService.saveProducts(next);
-        return next;
-      });
+      setProducts((current) =>
+        current.map((item) => (item.id === id || item._id === id ? product : item))
+      );
     });
   }, []);
 
   const contextValue = useMemo(
     () => ({
       products,
+      loading,
       refreshProducts,
       getProductBySlug,
       getProductById,
@@ -160,6 +153,7 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }),
     [
       products,
+      loading,
       refreshProducts,
       getProductBySlug,
       getProductById,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import type { CartItem } from '../../types/cart';
-import { getProductBySlug } from '../../data/products';
+import { useProducts } from '../../context/ProductContext';
 
 interface CartItemCardProps {
   item: CartItem;
@@ -12,7 +12,8 @@ interface CartItemCardProps {
 export const CartItemCard: React.FC<CartItemCardProps> = ({ item, onUpdateQuantity, onRemove }) => {
   const formattedPrice = item.price.toLocaleString('en-IN');
   const formattedOldPrice = item.oldPrice.toLocaleString('en-IN');
-  const product = getProductBySlug(item.productId);
+  const { getProductBySlug, getProductById } = useProducts();
+  const product = getProductBySlug(item.productId) || getProductById(item.productId);
   const productSlug = product ? product.slug : item.productId;
 
   return (
