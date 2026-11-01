@@ -52,7 +52,7 @@ export const CheckoutPage: React.FC = () => {
     );
   }
 
-  const handleCheckoutSubmit = (e: React.FormEvent) => {
+  const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!customerName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
@@ -73,26 +73,30 @@ export const CheckoutPage: React.FC = () => {
       fileFormat: item.format,
     }));
 
-    // Create Order object in LocalStorage
-    orderService.createOrder({
-      userId: currentUser?.id || 'guest_user',
-      customerName: customerName.trim(),
-      customerEmail: customerEmail.trim(),
-      customerPhone: customerPhone.trim(),
-      shippingAddress: shippingAddress.trim(),
-      items: orderItems,
-      subtotal: summary.subtotal,
-      gst: summary.gst,
-      totalAmount: summary.totalPayable,
-      status: 'Completed', // Instant digital download auto completes
-      paymentMethod,
-    });
+    try {
+      // Save order locally and sync to MongoDB database
+      await orderService.createOrderAsync({
+        userId: currentUser?.id || 'guest_user',
+        customerName: customerName.trim(),
+        customerEmail: customerEmail.trim(),
+        customerPhone: customerPhone.trim(),
+        shippingAddress: shippingAddress.trim(),
+        items: orderItems,
+        subtotal: summary.subtotal,
+        gst: summary.gst,
+        totalAmount: summary.totalPayable,
+        status: 'Completed', // Instant digital download auto completes
+        paymentMethod,
+      });
 
-    setTimeout(() => {
       clearCart();
       setIsProcessing(false);
       navigate('/account/orders');
-    }, 1200);
+    } catch (err: any) {
+      console.error('Order creation error:', err);
+      setError(err.message || 'Failed to complete order. Please try again.');
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -108,182 +112,191 @@ export const CheckoutPage: React.FC = () => {
         <div className="space-y-6">
           
           <div className="border-b border-slate-200 pb-4">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Checkout Order</h1>
-            <p className="text-xs text-slate-500">
-              Frontend demo checkout. Orders are saved into <code className="bg-amber-100 px-1 rounded text-amber-900">civil_orders</code> LocalStorage key.
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Checkout</h1>
+            <p className="text-xs text-slate-500 font-normal">Complete your payment details to receive immediate digital access.</p>
           </div>
 
           {error && (
-            <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-2xl">
-              ⚠️ {error}
+            <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl text-xs font-semibold flex items-center gap-2">
+              <span>⚠️</span>
+              <span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleCheckoutSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
-            {/* Left Column: Form Fields (7 cols) */}
-            <div className="lg:col-span-7 space-y-6">
+            {/* Form Left Side */}
+            <div className="lg:col-span-7 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
               
-              {/* Contact Info Card */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
-                <h3 className="text-base font-extrabold text-slate-900 border-b border-slate-100 pb-2">
-                  1. Customer & Delivery Contact Information
-                </h3>
+              <form onSubmit={handleCheckoutSubmit} className="space-y-6">
+                <div>
+                  <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-400 mb-4">1. Contact & Customer Details</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-bold text-slate-700">
+                    <div>
+                      <label className="block mb-1.5">Full Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        placeholder="John Doe"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-normal focus:outline-none focus:ring-2 focus:ring-[#F5A623]/20"
+                      />
+                    </div>
 
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700">Full Name *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Rahul Sharma"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F5A623]/30"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700">Email Address (For Files Delivery) *</label>
+                    <div>
+                      <label className="block mb-1.5">Email Address (Downloads sent here) *</label>
                       <input
                         type="email"
                         required
-                        placeholder="you@example.com"
                         value={customerEmail}
                         onChange={(e) => setCustomerEmail(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F5A623]/30"
+                        placeholder="john@example.com"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-normal focus:outline-none focus:ring-2 focus:ring-[#F5A623]/20"
                       />
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-700">Phone Number *</label>
+                    <div className="sm:col-span-2">
+                      <label className="block mb-1.5">Phone Number (For payment receipt) *</label>
                       <input
                         type="tel"
                         required
-                        placeholder="98765 43210"
                         value={customerPhone}
                         onChange={(e) => setCustomerPhone(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F5A623]/30"
+                        placeholder="+91 98765 43210"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-normal focus:outline-none focus:ring-2 focus:ring-[#F5A623]/20"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block mb-1.5">Billing Address</label>
+                      <input
+                        type="text"
+                        value={shippingAddress}
+                        onChange={(e) => setShippingAddress(e.target.value)}
+                        placeholder="Address, City, State, PIN"
+                        className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-normal focus:outline-none focus:ring-2 focus:ring-[#F5A623]/20"
                       />
                     </div>
                   </div>
+                </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-700">Billing / Delivery Address</label>
-                    <input
-                      type="text"
-                      placeholder="123 Civil Engineering Hub, City, State"
-                      value={shippingAddress}
-                      onChange={(e) => setShippingAddress(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#F5A623]/30"
-                    />
+                <div className="border-t border-slate-100 pt-6">
+                  <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-400 mb-4">2. Select Payment Method</h3>
+                  
+                  <div className="space-y-3">
+                    {[
+                      'UPI / QR Code',
+                      'UPI / GooglePay / PhonePe',
+                      'Credit / Debit Card',
+                      'Net Banking',
+                    ].map((method) => (
+                      <label
+                        key={method}
+                        className={`flex items-center gap-3 p-3.5 rounded-2xl border text-xs font-bold cursor-pointer transition-all ${
+                          paymentMethod === method
+                            ? 'bg-amber-50/50 border-[#F5A623] text-slate-900 shadow-xs'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100/50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="payment"
+                          checked={paymentMethod === method}
+                          onChange={() => setPaymentMethod(method)}
+                          className="w-4 h-4 text-[#F5A623] focus:ring-[#F5A623]"
+                        />
+                        <span>{method}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
-              </div>
 
-              {/* Payment Method Selector */}
-              <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
-                <h3 className="text-base font-extrabold text-slate-900 border-b border-slate-100 pb-2">
-                  2. Select Payment Mode (Frontend Demo)
-                </h3>
-
-                <div className="space-y-2">
-                  {[
-                    'UPI / GooglePay / PhonePe',
-                    'Credit / Debit Card',
-                    'Net Banking',
-                    'Instant Digital Access (Free Demo)',
-                  ].map((method) => (
-                    <label
-                      key={method}
-                      className={`flex items-center gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                        paymentMethod === method
-                          ? 'border-[#F5A623] bg-amber-50/50 font-bold text-slate-900'
-                          : 'border-slate-200 bg-white font-medium text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        checked={paymentMethod === method}
-                        onChange={() => setPaymentMethod(method)}
-                        className="w-4 h-4 text-[#F5A623] accent-[#F5A623]"
-                      />
-                      <span className="text-xs">{method}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  className="w-full py-4 bg-[#F5A623] hover:bg-[#e0951a] disabled:opacity-50 text-white font-extrabold text-sm rounded-2xl shadow-md transition-colors cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {isProcessing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Processing Payment & Order...</span>
+                    </>
+                  ) : (
+                    <span>Pay ₹{summary.totalPayable.toLocaleString('en-IN')} & Download Instantly</span>
+                  )}
+                </button>
+              </form>
 
             </div>
 
-            {/* Right Column: Order Summary Card (5 cols) */}
-            <div className="lg:col-span-5 bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-5">
-              <h3 className="text-base font-extrabold text-slate-900 border-b border-slate-100 pb-3">
-                Order Items ({summary.totalItemsCount})
+            {/* Order Summary Right Side */}
+            <div className="lg:col-span-5 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-3">
+                Order Review ({cartItems.length} {cartItems.length === 1 ? 'item' : 'items'})
               </h3>
 
-              <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+              {/* Items List */}
+              <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto pr-1">
                 {cartItems.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between text-xs py-1 border-b border-slate-50">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <span className="font-bold text-[#F5A623] shrink-0">{item.quantity}x</span>
-                      <span className="font-semibold text-slate-800 truncate">{item.name}</span>
+                  <div key={item.id} className="py-3 flex items-center gap-3 text-xs">
+                    {item.image ? (
+                      <img src={item.image} alt={item.name} className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-amber-50 text-[#F5A623] flex items-center justify-center font-bold text-lg shrink-0">
+                        📄
+                      </div>
+                    )}
+                    <div className="flex-grow min-w-0">
+                      <h4 className="font-bold text-slate-900 truncate">{item.name}</h4>
+                      <p className="text-[10px] text-slate-500 font-medium">Format: {item.format || 'ZIP'} • Qty: {item.quantity}</p>
                     </div>
-                    <span className="font-extrabold text-slate-900 shrink-0">
+                    <div className="font-extrabold text-slate-900 shrink-0">
                       ₹{(item.price * item.quantity).toLocaleString('en-IN')}
-                    </span>
+                    </div>
                   </div>
                 ))}
               </div>
 
-              <div className="border-t border-slate-200 pt-4 space-y-2 text-xs font-semibold text-slate-600">
-                <div className="flex justify-between">
+              {/* Price Details */}
+              <div className="space-y-2 border-t border-slate-100 pt-4 text-xs">
+                <div className="flex justify-between text-slate-600">
                   <span>Subtotal</span>
                   <span className="font-bold text-slate-900">₹{summary.subtotal.toLocaleString('en-IN')}</span>
                 </div>
-
+                
                 {summary.couponDiscount > 0 && (
-                  <div className="flex justify-between text-emerald-600">
+                  <div className="flex justify-between text-emerald-600 font-bold">
                     <span>Coupon Discount</span>
-                    <span className="font-bold">-₹{summary.couponDiscount.toLocaleString('en-IN')}</span>
+                    <span>-₹{summary.couponDiscount.toLocaleString('en-IN')}</span>
                   </div>
                 )}
 
-                <div className="flex justify-between">
-                  <span>GST (18%)</span>
+                <div className="flex justify-between text-slate-600">
+                  <span>Estimated GST (18%)</span>
                   <span className="font-bold text-slate-900">₹{summary.gst.toLocaleString('en-IN')}</span>
                 </div>
 
-                <div className="flex justify-between">
-                  <span>Delivery Fee</span>
-                  <span className="font-bold text-emerald-600">FREE INSTANT DOWNLOAD</span>
-                </div>
-
-                <div className="border-t border-slate-200 pt-3 flex justify-between items-baseline">
-                  <span className="text-base font-extrabold text-slate-900">Total Payable</span>
-                  <span className="text-2xl font-black text-slate-900">
-                    ₹{summary.totalPayable.toLocaleString('en-IN')}
-                  </span>
+                <div className="flex justify-between text-sm font-extrabold text-slate-900 border-t border-slate-100 pt-3">
+                  <span>Total Payable</span>
+                  <span className="text-[#F5A623]">₹{summary.totalPayable.toLocaleString('en-IN')}</span>
                 </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={isProcessing}
-                className="w-full bg-[#F5A623] hover:bg-[#e0951a] text-white font-extrabold text-sm py-4 px-4 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer disabled:opacity-60"
-              >
-                {isProcessing ? 'Processing Order...' : 'Complete Purchase & Get Instant Download →'}
-              </button>
-
-              <div className="text-center text-[11px] text-slate-400 font-medium">
-                🔒 256-bit encrypted secure LocalStorage checkout.
+              {/* Trust Badge */}
+              <div className="p-3 bg-amber-50/50 rounded-2xl border border-amber-200/60 text-[11px] text-amber-900 space-y-1">
+                <div className="font-bold flex items-center gap-1.5">
+                  <span>🔒</span>
+                  <span>Instant Digital Delivery</span>
+                </div>
+                <p className="text-amber-800/80 text-[10px]">
+                  Files will be available immediately for download on the order success page and saved to your account.
+                </p>
               </div>
+
             </div>
 
-          </form>
+          </div>
 
         </div>
       </main>

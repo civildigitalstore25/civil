@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import AnnouncementBar from '../../components/layout/AnnouncementBar';
 import Header from '../../components/layout/Header';
@@ -7,12 +7,50 @@ import Footer from '../../components/layout/Footer';
 import WhatsAppButton from '../../components/common/WhatsAppButton';
 import { useAuth } from '../../hooks/useAuth';
 import { orderService } from '../../services/orderService';
+import { downloadService } from '../../services/downloadService';
+import type { Order } from '../../types/order';
 
 export const MyOrdersPage: React.FC = () => {
   const { currentUser } = useAuth();
-  const userOrders = currentUser
-    ? orderService.getUserOrders(currentUser.id, currentUser.email)
-    : [];
+  const [orders, setOrders] = useState<Order[]>(() =>
+    orderService.getUserOrders(currentUser?.id, currentUser?.email)
+  );
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    void orderService.fetchUserOrders(currentUser?.id, currentUser?.email).then((latest) => {
+      if (isMounted && latest.length > 0) {
+        setOrders(latest);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser]);
+
+  const handleDownload = async (order: Order, productId: string, title: string) => {
+    const itemKey = `${order.id}-${productId}`;
+    setDownloadingId(itemKey);
+    setDownloadError(null);
+
+    try {
+      const result = await downloadService.startDownload(
+        order,
+        productId,
+        order.customerEmail
+      );
+
+      if (!result.success) {
+        setDownloadError(result.error || `Failed to initiate download for "${title}".`);
+      }
+    } catch (err: any) {
+      setDownloadError(err.message || `An error occurred while preparing download for "${title}".`);
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -54,18 +92,33 @@ export const MyOrdersPage: React.FC = () => {
           </Link>
         </div>
 
+        {downloadError && (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-semibold text-rose-800 flex items-center justify-between animate-fade-in shadow-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-base">⚠️</span>
+              <span>{downloadError}</span>
+            </div>
+            <button
+              onClick={() => setDownloadError(null)}
+              className="text-rose-600 hover:text-rose-900 font-bold ml-4 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Orders List */}
-        {userOrders.length > 0 ? (
+        {orders.length > 0 ? (
           <div className="space-y-6">
-            {userOrders.map((order) => (
+            {orders.map((order) => (
               <div
-                key={order.id}
+                key={order.id || order.orderId}
                 className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4 transition-all hover:shadow-md"
               >
                 {/* Order Top Summary Bar */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 pb-4 text-xs">
                   <div>
-                    <span className="font-extrabold text-slate-900 text-sm">{order.id}</span>
+                    <span className="font-extrabold text-slate-900 text-sm">{order.orderId || order.id}</span>
                     <span className="text-slate-400 font-medium ml-3">
                       Ordered on{' '}
                       {new Date(order.createdAt).toLocaleDateString('en-IN', {
@@ -92,44 +145,62 @@ export const MyOrdersPage: React.FC = () => {
 
                 {/* Items List */}
                 <div className="space-y-3">
-                  {order.items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-3 bg-slate-50 rounded-2xl"
-                    >
-                      <div className="flex items-center gap-3">
-                        {item.image ? (
-                          <img src={item.image} alt={item.title} className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0" />
-                        ) : (
-                          <div className="w-12 h-12 rounded-xl bg-amber-50 text-[#F5A623] flex items-center justify-center font-bold text-lg shrink-0">
-                            📁
+                  {order.items.map((item) => {
+                    const itemKey = `${order.id}-${item.productId}`;
+                    const isDownloading = downloadingId === itemKey;
+
+                    return (
+                      <div
+                        key={item.id || item.productId}
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-3 bg-slate-50 rounded-2xl"
+                      >
+                        <div className="flex items-center gap-3">
+                          {item.image ? (
+                            <img src={item.image} alt={item.title} className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-xl bg-amber-50 text-[#F5A623] flex items-center justify-center font-bold text-lg shrink-0">
+                              📁
+                            </div>
+                          )}
+                          <div>
+                            <h4 className="text-xs font-bold text-slate-900 line-clamp-1">{item.title}</h4>
+                            <span className="text-[10px] text-slate-500 font-semibold">
+                              Format: {item.fileFormat || 'ZIP Download'} • Qty: {item.quantity}
+                            </span>
                           </div>
-                        )}
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-900 line-clamp-1">{item.title}</h4>
-                          <span className="text-[10px] text-slate-500 font-semibold">
-                            Format: {item.fileFormat || 'ZIP Download'} • Qty: {item.quantity}
+                        </div>
+
+                        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                          <span className="text-xs font-extrabold text-slate-900">
+                            ₹{(item.price * item.quantity).toLocaleString('en-IN')}
                           </span>
+
+                          <button
+                            onClick={() => handleDownload(order, item.productId, item.title)}
+                            disabled={isDownloading || order.status === 'Cancelled'}
+                            className="bg-[#F5A623] hover:bg-[#e0951a] disabled:opacity-60 disabled:cursor-not-allowed text-white font-extrabold text-xs px-3.5 py-2 rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+                          >
+                            {isDownloading ? (
+                              <>
+                                <svg className="animate-spin w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                </svg>
+                                <span>Preparing...</span>
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                                <span>Download Files</span>
+                              </>
+                            )}
+                          </button>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                        <span className="text-xs font-extrabold text-slate-900">
-                          ₹{(item.price * item.quantity).toLocaleString('en-IN')}
-                        </span>
-
-                        <button
-                          onClick={() => alert(`Demo Mode: Download starting for "${item.title}". File format: ${item.fileFormat || 'ZIP'}`)}
-                          className="bg-[#F5A623] hover:bg-[#e0951a] text-white font-extrabold text-xs px-3.5 py-2 rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
-                        >
-                          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                          </svg>
-                          <span>Download Files</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
               </div>

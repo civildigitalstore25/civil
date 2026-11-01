@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import AdminPageToolbar from '../../components/admin/AdminPageToolbar';
 import { orderService } from '../../services/orderService';
@@ -11,8 +11,14 @@ export const AdminOrdersPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState<string>('All');
 
   const refreshOrders = () => {
-    setOrders(orderService.getOrders());
+    void orderService.fetchAdminOrders().then((latest) => {
+      setOrders(latest);
+    });
   };
+
+  useEffect(() => {
+    refreshOrders();
+  }, []);
 
   const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
     orderService.updateOrderStatus(orderId, newStatus);

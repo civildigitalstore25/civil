@@ -1,5 +1,38 @@
 import type { Request, Response } from 'express';
-import Product from '../models/Product.js';
+import jwt from 'jsonwebtoken';
+import Product, { type IProduct } from '../models/Product.js';
+import User from '../models/User.js';
+import { AUTH } from '../constants/auth.js';
+import { config } from '../config/index.js';
+
+const checkIsAdmin = async (req: Request): Promise<boolean> => {
+  try {
+    const authHeader = req.headers.authorization;
+    const bearerToken = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice('Bearer '.length)
+      : undefined;
+    const token = req.cookies?.[AUTH.cookieName] ?? bearerToken;
+    if (!token) return false;
+
+    const decoded = jwt.verify(token, config.jwtSecret) as any;
+    if (decoded?.role === 'admin' || decoded?.role === 'superadmin') {
+      const user = await User.findById(decoded.id);
+      return user?.role === 'admin' || user?.role === 'superadmin';
+    }
+    return false;
+  } catch {
+    return false;
+  }
+};
+
+const sanitizeProduct = (product: any, isAdmin: boolean) => {
+  if (!product) return null;
+  const obj = typeof product.toObject === 'function' ? product.toObject() : { ...product };
+  if (!isAdmin) {
+    delete obj.driveLink;
+  }
+  return obj;
+};
 
 export const getProducts = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -47,6 +80,7 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
       filter.isOutOfStock = true;
     }
 
+    const isAdmin = await checkIsAdmin(req);
     const skip = (Number(page) - 1) * Number(limit);
     const total = await Product.countDocuments(filter);
     const products = await Product.find(filter)
@@ -54,12 +88,14 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
       .skip(skip)
       .limit(Number(limit) || 200);
 
+    const sanitizedProducts = products.map((p) => sanitizeProduct(p, isAdmin));
+
     res.json({
       success: true,
       total,
       page: Number(page),
       limit: Number(limit),
-      products
+      products: sanitizedProducts,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch products', error });
@@ -74,7 +110,8 @@ export const getProductBySlug = async (req: Request, res: Response): Promise<voi
       res.status(404).json({ success: false, message: 'Product not found' });
       return;
     }
-    res.json({ success: true, product });
+    const isAdmin = await checkIsAdmin(req);
+    res.json({ success: true, product: sanitizeProduct(product, isAdmin) });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch product', error });
   }
@@ -87,7 +124,8 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
       res.status(404).json({ success: false, message: 'Product not found' });
       return;
     }
-    res.json({ success: true, product });
+    const isAdmin = await checkIsAdmin(req);
+    res.json({ success: true, product: sanitizeProduct(product, isAdmin) });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to fetch product', error });
   }

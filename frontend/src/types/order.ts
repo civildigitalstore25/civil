@@ -1,17 +1,19 @@
 export type OrderStatus = 'Pending' | 'Processing' | 'Completed' | 'Cancelled';
 
 export interface OrderItem {
-  id: string;
+  id?: string;
   productId: string;
   title: string;
   price: number;
   quantity: number;
   image?: string;
   fileFormat?: string;
+  hasDownload?: boolean;
 }
 
 export interface Order {
   id: string;
+  orderId?: string;
   userId: string;
   customerName: string;
   customerEmail: string;
@@ -23,5 +25,6 @@ export interface Order {
   totalAmount: number;
   status: OrderStatus;
   paymentMethod: string;
+  paymentStatus?: string;
   createdAt: string;
 }

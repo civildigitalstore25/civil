@@ -14,6 +14,8 @@ export interface IProduct extends Document {
   category: string;
   categorySlug: string;
   software: string;
+  brand?: string;
+  company?: string;
   format: string;
   fileSize: string;
   price: number;
@@ -33,6 +35,15 @@ export interface IProduct extends Document {
   description: string[];
   includedFiles: string[];
   images: string[];
+  imageUrl?: string;
+  additionalImages?: string[];
+  videoUrl?: string;
+  activationVideoUrl?: string;
+  instagramReels?: string[];
+  driveLink?: string;
+  faqs?: any[];
+  systemRequirements?: any[];
+  reviews?: any[];
   specifications: {
     format: string;
     fileSize: string;
@@ -55,6 +66,7 @@ export interface IProduct extends Document {
   keyFeatures?: IKeyFeature[];
   createdAt: Date;
   updatedAt: Date;
+  [key: string]: any;
 }
 
 const keyFeatureSchema = new Schema<IKeyFeature>(

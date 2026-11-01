@@ -24,6 +24,11 @@ if (jwtSecret.length < 32) {
   throw new Error('JWT_SECRET must contain at least 32 characters');
 }
 
+const formatPrivateKey = (key?: string): string => {
+  if (!key) return '';
+  return key.replace(/\\n/g, '\n').replace(/^["']|["']$/g, '').trim();
+};
+
 export const config = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: Number(process.env.PORT) || 5000,
@@ -37,5 +42,8 @@ export const config = {
   superAdminEmail: required('SUPERADMIN_EMAIL'),
   superAdminPassword: required('SUPERADMIN_PASSWORD'),
   isProduction: process.env.NODE_ENV === 'production',
+  googleDriveEnabled: process.env.GOOGLE_DRIVE_ENABLED === 'true',
+  googleServiceAccountEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim() ?? '',
+  googlePrivateKey: formatPrivateKey(process.env.GOOGLE_PRIVATE_KEY),
+  googleDriveFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID?.trim() ?? '',
 };
-

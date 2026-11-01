@@ -60,6 +60,34 @@ export const authenticate = async (
   }
 };
 
+export const optionalAuthenticate = async (
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    const bearerToken = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice('Bearer '.length)
+      : undefined;
+    const token = req.cookies?.[AUTH.cookieName] ?? bearerToken;
+
+    if (!token) {
+      next();
+      return;
+    }
+
+    const decoded = jwt.verify(token, config.jwtSecret) as JwtPayload;
+    const user = await User.findById(decoded.id);
+    if (user && decoded.tokenVersion === user.tokenVersion) {
+      req.user = user;
+    }
+  } catch {
+    // Ignore invalid token in optional auth
+  }
+  next();
+};
+
 export const authorizeRoles = (...roles: UserRole[]) => {
   return (req: AuthRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {

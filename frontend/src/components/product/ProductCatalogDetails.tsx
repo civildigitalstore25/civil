@@ -147,7 +147,6 @@ export const ProductCatalogDetails: React.FC<{ product: Product }> = ({ product 
     <LinkList title="Demo video" links={product.videoUrl ? [product.videoUrl] : []} />
     <LinkList title="Activation video" links={product.activationVideoUrl ? [product.activationVideoUrl] : []} />
     <LinkList title="Instagram reels" links={product.instagramReels} />
-    {product.driveLink && <LinkList title="Download link" links={[product.driveLink]} />}
 
     {(product.seoTitle || product.seoDescription || product.seoKeywords?.length) && (
       <section className="space-y-1 border-t border-slate-100 pt-4 text-xs text-slate-500">
