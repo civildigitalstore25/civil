@@ -29,6 +29,12 @@ export interface IOrder extends Document {
   paymentMethod: string;
   paymentStatus: PaymentStatus;
   downloadCount: number;
+  couponCode?: string;
+  couponDiscount?: number;
+  amountPaise?: number;
+  phonepeOrderId?: string;
+  confirmationEmailSent?: boolean;
+  paidAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -72,6 +78,12 @@ const orderSchema = new Schema<IOrder>(
       index: true,
     },
     downloadCount: { type: Number, default: 0 },
+    couponCode: { type: String, default: '' },
+    couponDiscount: { type: Number, default: 0 },
+    amountPaise: { type: Number, default: 0 },
+    phonepeOrderId: { type: String, default: '' },
+    confirmationEmailSent: { type: Boolean, default: false },
+    paidAt: { type: Date },
   },
   {
     timestamps: true,

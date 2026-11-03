@@ -6,6 +6,7 @@ import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import WhatsAppButton from '../components/common/WhatsAppButton';
 import { storageService } from '../services/storageService';
+import { apiRequest } from '../services/apiClient';
 
 export const ContactUsPage: React.FC = () => {
   const [name, setName] = useState('');
@@ -14,10 +15,12 @@ export const ContactUsPage: React.FC = () => {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !message.trim()) return;
+    if (!name.trim() || !email.trim() || !message.trim() || sending) return;
 
     const newMessage = {
       id: `msg_${Date.now()}`,
@@ -29,7 +32,26 @@ export const ContactUsPage: React.FC = () => {
       createdAt: new Date().toISOString(),
     };
 
-    // Save message to LocalStorage
+    setSending(true);
+    setSendError(null);
+    setSubmitted(false);
+    try {
+      // Emails the store inbox via the backend (Brevo).
+      const { response, data } = await apiRequest<{ success?: boolean; message?: string }>('/contact', {
+        method: 'POST',
+        body: JSON.stringify(newMessage),
+      });
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Unable to send your message right now.');
+      }
+    } catch (err: any) {
+      setSendError(err?.message || 'Unable to send your message right now. Please try again later.');
+      setSending(false);
+      return;
+    }
+    setSending(false);
+
+    // Keep a local copy as before
     const existing = storageService.getItem<any[]>('civil_contact_messages', []);
     storageService.setItem('civil_contact_messages', [newMessage, ...existing]);
 
@@ -174,6 +196,12 @@ export const ContactUsPage: React.FC = () => {
             </div>
           )}
 
+          {sendError && (
+            <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm font-bold rounded-xl">
+              {sendError}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1">
@@ -239,7 +267,8 @@ export const ContactUsPage: React.FC = () => {
             <div className="flex justify-end">
               <button
                 type="submit"
-                className="bg-[#F5A623] hover:bg-amber-600 text-slate-950 font-extrabold text-xs sm:text-sm py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
+                disabled={sending}
+                className="disabled:opacity-60 bg-[#F5A623] hover:bg-amber-600 text-slate-950 font-extrabold text-xs sm:text-sm py-3 px-8 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer"
               >
                 Send Message →
               </button>

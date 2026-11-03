@@ -6,11 +6,16 @@ import { useCart } from '../../context/CartContext';
 import ProductAccessPicker from './ProductAccessPicker';
 import {
   buildAccessPlans,
+  dealState,
   displayText,
-  isScheduleActive,
+  formatIstDateTime,
+  freeOfferState,
+  hasLiveWindow,
   plainText,
   reviewStats,
 } from '../../utils/productDisplay';
+import { useNow } from '../../hooks/useNow';
+import OfferCountdown from './OfferCountdown';
 
 interface ProductInfoSectionProps {
   product: Product;
@@ -21,7 +26,14 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({ product 
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
-  const plans = useMemo(() => buildAccessPlans(product), [product]);
+  // Live free/deal state (civil-ecommerce useProductDetailDealFree): re-evaluated every second while a
+  // window is upcoming/active so prices flip exactly at start/end. The interval is cleaned up by useNow.
+  const now = useNow(hasLiveWindow(product));
+  const free = freeOfferState(product, now);
+  const deal = dealState(product, now);
+  const freeOn = free.status === 'active';
+  const dealOn = !freeOn && deal.status === 'active';
+  const plans = useMemo(() => buildAccessPlans(product), [product, free.status, deal.status]); // eslint-disable-line react-hooks/exhaustive-deps
   const [selectedId, setSelectedId] = useState(plans[0]?.id || '');
   const selected = plans.find((plan) => plan.id === selectedId) || plans[0];
   const reviews = reviewStats(product);
@@ -32,8 +44,6 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({ product 
   const showSummary = summary && summary !== product.name.trim();
   const format = displayText(product.format);
   const fileSize = displayText(product.fileSize);
-  const dealOn = isScheduleActive(product.isDeal, product.dealStartDate, product.dealStartTime, product.dealEndDate, product.dealEndTime);
-  const freeOn = isScheduleActive(product.isFreeProduct, product.freeProductStartDate, product.freeProductStartTime, product.freeProductEndDate, product.freeProductEndTime);
   const savings = selected?.compareINR && selected.compareINR > selected.priceINR ? selected.compareINR - selected.priceINR : 0;
 
   const purchase = () => {
@@ -93,27 +103,54 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({ product 
         </div>
       )}
 
-      {dealOn && (
-        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
-          Limited deal
-          {product.dealEndDate ? ` until ${product.dealEndDate}${product.dealEndTime ? ` ${product.dealEndTime}` : ''}` : ''}
-        </p>
+      {freeOn && free.endMs !== null && (
+        <OfferCountdown variant="featured" tone="free" targetMs={free.endMs} label="Free for a limited time - claim it before it ends" />
       )}
-      {freeOn && (
-        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-          Free
-          {product.freeProductEndDate ? ` until ${product.freeProductEndDate}` : ' for a limited time'}
-        </p>
+      {freeOn && free.endMs === null && (
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">Free for a limited time</p>
+      )}
+      {dealOn && deal.endMs !== null && (
+        <OfferCountdown variant="featured" tone="deal" targetMs={deal.endMs} label="Limited time offer - grab it before it ends" />
+      )}
+      {!freeOn && free.status === 'upcoming' && free.startMs !== null && (
+        <div className="space-y-2">
+          <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+            This product will be FREE from {formatIstDateTime(free.startMs)}
+            {free.endMs !== null ? ` to ${formatIstDateTime(free.endMs)}` : ''}.
+          </p>
+          <OfferCountdown tone="upcoming" targetMs={free.startMs} label="Free offer starts in" />
+        </div>
+      )}
+      {!freeOn && !dealOn && deal.status === 'upcoming' && deal.startMs !== null && (
+        <OfferCountdown tone="upcoming" targetMs={deal.startMs} label="Deal starts in" />
+      )}
+
+      {freeOn && selected && (
+        <div className="flex flex-wrap items-baseline gap-3">
+          <span className="text-2xl font-black text-emerald-600">FREE</span>
+          {selected.compareINR ? (
+            <span className="text-sm font-medium text-slate-400 line-through">₹{selected.compareINR.toLocaleString('en-IN')}</span>
+          ) : null}
+          <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700">100% OFF</span>
+        </div>
       )}
 
       {selected && selected.priceINR > 0 && (
         <div className="space-y-2">
           <div className="flex flex-wrap items-baseline gap-3">
+            {selected.isDeal && (
+              <span className="rounded-md bg-rose-600 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-white">Deal</span>
+            )}
             <span className="text-2xl font-bold text-slate-900">₹{(selected.priceINR * quantity).toLocaleString()}</span>
             {savings > 0 && selected.compareINR && (
               <span className="text-sm font-medium text-slate-400 line-through">₹{(selected.compareINR * quantity).toLocaleString()}</span>
             )}
           </div>
+          {savings > 0 && selected.compareINR && (
+            <span className="ml-1 rounded-md border border-[#F5A623]/30 bg-[#F5A623]/15 px-2 py-0.5 text-xs font-bold text-[#D97706]">
+              -{Math.round((savings / selected.compareINR) * 100)}% OFF
+            </span>
+          )}
           {savings > 0 && (
             <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800">
               You save ₹{(savings * quantity).toLocaleString()}
@@ -154,12 +191,20 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({ product 
             >
               Order on WhatsApp
             </a>
-            <button type="button" onClick={handleAddToCart} className={`w-full rounded-lg py-3 text-sm font-bold text-white ${addedToCart ? 'bg-emerald-600' : 'bg-gradient-to-r from-[#F5A623] to-[#FFAA00]'}`}>
-              {addedToCart ? 'Added to cart' : selected.priceINR > 0 ? 'Add to cart' : 'Get it free'}
-            </button>
-            <button type="button" onClick={() => { purchase(); navigate('/checkout'); }} className="w-full rounded-lg border border-slate-300 bg-white py-2.5 text-sm font-bold text-slate-900">
-              Buy it now
-            </button>
+            {freeOn ? (
+              <button type="button" onClick={() => { purchase(); navigate('/checkout'); }} className="w-full rounded-lg bg-emerald-600 py-3 text-sm font-bold text-white hover:bg-emerald-700">
+                Get it Free
+              </button>
+            ) : (
+              <>
+                <button type="button" onClick={handleAddToCart} className={`w-full rounded-lg py-3 text-sm font-bold text-white ${addedToCart ? 'bg-emerald-600' : 'bg-gradient-to-r from-[#F5A623] to-[#FFAA00]'}`}>
+                  {addedToCart ? 'Added to cart' : 'Add to cart'}
+                </button>
+                <button type="button" onClick={() => { purchase(); navigate('/checkout'); }} className="w-full rounded-lg border border-slate-300 bg-white py-2.5 text-sm font-bold text-slate-900">
+                  Buy it now
+                </button>
+              </>
+            )}
           </>
         )
       )}

@@ -27,4 +27,9 @@ export interface Order {
   paymentMethod: string;
   paymentStatus?: string;
   createdAt: string;
+  updatedAt?: string;
+  paidAt?: string;
+  couponCode?: string;
+  couponDiscount?: number;
+  phonepeOrderId?: string;
 }

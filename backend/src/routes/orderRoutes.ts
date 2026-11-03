@@ -14,8 +14,9 @@ import {
 
 const router = Router();
 
-// Customer creates an order (handles logged in user or guest checkout)
-router.post('/', optionalAuthenticate, createOrder);
+// Manual order entry - admin only. Customer orders are created exclusively by
+// POST /api/payments/phonepe/initiate (server-computed amounts, Pending until PhonePe confirms).
+router.post('/', authenticate, authorizeRoles('admin', 'superadmin'), createOrder);
 
 // Authenticated user gets their purchase history
 router.get('/my-orders', authenticate, getMyOrders);

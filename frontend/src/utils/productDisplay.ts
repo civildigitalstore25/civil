@@ -47,26 +47,61 @@ export const reviewStats = (product: Product) => {
   return { rating, count };
 };
 
+/**
+ * Deal/free windows are entered in IST (separate date + time strings). Evaluated with +05:30 so every
+ * browser agrees with the server. Keep in sync with backend/src/utils/productSchedule.ts.
+ */
+export type ScheduleStatus = 'off' | 'upcoming' | 'active' | 'ended';
+export interface ScheduleState {
+  status: ScheduleStatus;
+  startMs: number | null;
+  endMs: number | null;
+}
+
+const istInstant = (date?: string, time?: string, fallbackTime = '00:00'): number | null => {
+  const d = String(date || '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+  const tm = String(time || '').trim();
+  const ms = new Date(`${d}T${/^\d{2}:\d{2}$/.test(tm) ? tm : fallbackTime}:00+05:30`).getTime();
+  return Number.isNaN(ms) ? null : ms;
+};
+
+export const scheduleState = (
+  enabled: boolean | undefined,
+  startDate?: string,
+  startTime?: string,
+  endDate?: string,
+  endTime?: string,
+  now: number = Date.now(),
+): ScheduleState => {
+  const startMs = istInstant(startDate, startTime, '00:00');
+  const endMs = istInstant(endDate, endTime, '23:59');
+  if (!enabled) return { status: 'off', startMs, endMs };
+  if (startMs !== null && now < startMs) return { status: 'upcoming', startMs, endMs };
+  if (endMs !== null && now > endMs) return { status: 'ended', startMs, endMs };
+  return { status: 'active', startMs, endMs };
+};
+
 export const isScheduleActive = (
   enabled: boolean | undefined,
   startDate?: string,
   startTime?: string,
   endDate?: string,
   endTime?: string,
-) => {
-  if (!enabled) return false;
-  if (!startDate && !endDate) return true;
-  const now = Date.now();
-  if (startDate) {
-    const start = new Date(`${startDate}T${startTime || '00:00'}`).getTime();
-    if (!Number.isNaN(start) && now < start) return false;
-  }
-  if (endDate) {
-    const end = new Date(`${endDate}T${endTime || '23:59'}`).getTime();
-    if (!Number.isNaN(end) && now > end) return false;
-  }
-  return true;
-};
+) => scheduleState(enabled, startDate, startTime, endDate, endTime).status === 'active';
+
+export const freeOfferState = (product: Product, now?: number) =>
+  scheduleState(product.isFreeProduct, product.freeProductStartDate, product.freeProductStartTime, product.freeProductEndDate, product.freeProductEndTime, now);
+
+export const dealState = (product: Product, now?: number) =>
+  scheduleState(product.isDeal, product.dealStartDate, product.dealStartTime, product.dealEndDate, product.dealEndTime, now);
+
+/** True while a free/deal window is upcoming or active, i.e. a boundary is still ahead of us. */
+export const hasLiveWindow = (product: Product) =>
+  ['upcoming', 'active'].includes(freeOfferState(product).status) || ['upcoming', 'active'].includes(dealState(product).status);
+
+export const formatIstDateTime = (ms: number) =>
+  new Date(ms).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' IST';
 
 export type AccessPlan = {
   id: string;
@@ -74,11 +109,19 @@ export type AccessPlan = {
   priceINR: number;
   compareINR?: number;
   note?: string;
+  /** Live limited-time deal price (compareINR holds the regular price). */
+  isDeal?: boolean;
+  /** Free offer is live (compareINR holds the lowest regular price). */
+  isFree?: boolean;
 };
 
 const pricedRow = (row: SubscriptionDuration) => positiveAmount(row.priceINR || row.price);
 
-export const buildAccessPlans = (product: Product): AccessPlan[] => {
+/** Cheapest plan, used by product cards for display and quick add-to-cart. */
+export const cheapestPlan = (plans: AccessPlan[]) =>
+  plans.reduce<AccessPlan | undefined>((best, plan) => (!best || plan.priceINR < best.priceINR ? plan : best), undefined);
+
+export const buildAccessPlans = (product: Product, options: { ignoreFree?: boolean } = {}): AccessPlan[] => {
   const dealOn = isScheduleActive(
     product.isDeal,
     product.dealStartDate,
@@ -93,7 +136,11 @@ export const buildAccessPlans = (product: Product): AccessPlan[] => {
     product.freeProductEndDate,
     product.freeProductEndTime,
   );
-  if (freeOn) return [{ id: 'free', label: 'Free', priceINR: 0 }];
+  if (freeOn && !options.ignoreFree) {
+    // Same as civil-ecommerce: during the free window the only option is Free, with the regular price struck out.
+    const regular = cheapestPlan(buildAccessPlans(product, { ignoreFree: true }));
+    return [{ id: 'free', label: 'Free', priceINR: 0, compareINR: regular?.priceINR || undefined, isFree: true }];
+  }
 
   const plans: AccessPlan[] = [];
   const strike = positiveAmount(product.strikethroughPriceINR);
@@ -106,6 +153,7 @@ export const buildAccessPlans = (product: Product): AccessPlan[] => {
       label: 'Base price',
       priceINR,
       compareINR: dealEbook && ebook > priceINR ? ebook : strike > priceINR ? strike : undefined,
+      isDeal: Boolean(dealEbook),
     });
   }
 
@@ -123,6 +171,7 @@ export const buildAccessPlans = (product: Product): AccessPlan[] => {
       label: displayText(row.duration) || 'Subscription',
       priceINR,
       compareINR: deal && regular > priceINR ? regular : undefined,
+      isDeal: Boolean(deal),
       note: displayText(row.trialDays) ? `${row.trialDays} day trial` : undefined,
     });
   });
@@ -137,6 +186,7 @@ export const buildAccessPlans = (product: Product): AccessPlan[] => {
         label: 'Lifetime access',
         priceINR,
         compareINR: deal && regular > priceINR ? regular : undefined,
+      isDeal: Boolean(deal),
       });
     }
   }
@@ -151,6 +201,7 @@ export const buildAccessPlans = (product: Product): AccessPlan[] => {
         label: 'Membership',
         priceINR,
         compareINR: deal && regular > priceINR ? regular : undefined,
+      isDeal: Boolean(deal),
       });
     }
   }

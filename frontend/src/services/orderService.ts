@@ -1,6 +1,5 @@
 import { STORAGE_KEYS, storageService } from './storageService';
 import type { Order, OrderStatus } from '../types/order';
-import { generateId } from '../utils/generateId';
 import { apiRequest } from './apiClient';
 
 interface BackendOrderResponse {
@@ -32,9 +31,14 @@ const mapBackendOrder = (raw: any): Order => ({
   gst: Number(raw.gst) || 0,
   totalAmount: Number(raw.totalAmount) || 0,
   status: (raw.status || 'Completed') as OrderStatus,
-  paymentMethod: raw.paymentMethod || 'UPI / QR Code',
+  paymentMethod: raw.paymentMethod || '-',
   paymentStatus: raw.paymentStatus || 'Paid',
   createdAt: raw.createdAt || new Date().toISOString(),
+  updatedAt: raw.updatedAt || undefined,
+  paidAt: raw.paidAt || undefined,
+  couponCode: raw.couponCode || '',
+  couponDiscount: Number(raw.couponDiscount) || 0,
+  phonepeOrderId: raw.phonepeOrderId || '',
 });
 
 export const orderService = {
@@ -64,75 +68,15 @@ export const orderService = {
     return this.getOrders().find((o) => o.id === id || o.orderId === id);
   },
 
-  createOrder(data: Omit<Order, 'id' | 'createdAt'>): Order {
-    const orders = this.getOrders();
-    const newOrder: Order = {
-      ...data,
-      id: generateId('ord'),
-      createdAt: new Date().toISOString(),
-    };
-
-    const updated = [newOrder, ...orders];
-    this.saveOrders(updated);
-
-    // Sync to backend asynchronously
-    this.syncOrderToBackend(newOrder).catch((err) => {
-      console.warn('Backend order sync warning:', err);
-    });
-
-    return newOrder;
-  },
-
-  async createOrderAsync(data: Omit<Order, 'id' | 'createdAt'>): Promise<Order> {
-    const orders = this.getOrders();
-    const orderId = generateId('ord');
-    const newOrder: Order = {
-      ...data,
-      id: orderId,
-      orderId: orderId,
-      createdAt: new Date().toISOString(),
-    };
-
-    // Save locally immediately
-    const updated = [newOrder, ...orders];
-    this.saveOrders(updated);
-
-    // Sync to backend and await confirmation
-    const synced = await this.syncOrderToBackend(newOrder);
-    return synced || newOrder;
-  },
-
-  async syncOrderToBackend(order: Order): Promise<Order | null> {
+  /** Single order for its owner (GET /api/orders/:id checks ownership by user id / email). */
+  async fetchOrder(orderId: string): Promise<{ order: Order | null; status: number; error?: string }> {
     try {
-      const payload = {
-        ...order,
-        orderId: order.orderId || order.id,
-      };
-
-      const { response, data } = await apiRequest<BackendOrderResponse>('/orders', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok && data.success && data.order) {
-        const synced = mapBackendOrder(data.order);
-        // Update local storage with backend assigned details
-        const orders = this.getOrders();
-        const index = orders.findIndex((o) => o.id === order.id || o.id === synced.id);
-        if (index !== -1) {
-          orders[index] = synced;
-        } else {
-          orders.unshift(synced);
-        }
-        this.saveOrders(orders);
-        return synced;
-      } else {
-        console.warn('Backend rejected order creation:', data.message);
-      }
-    } catch (err) {
-      console.error('Failed to sync order to backend:', err);
+      const { response, data } = await apiRequest<BackendOrderResponse>(`/orders/${encodeURIComponent(orderId)}`);
+      if (response.ok && data.success && data.order) return { order: mapBackendOrder(data.order), status: response.status };
+      return { order: null, status: response.status, error: data.message || 'Order not found' };
+    } catch (err: any) {
+      return { order: null, status: 0, error: err?.message || 'Network error' };
     }
-    return null;
   },
 
   async fetchUserOrders(userId?: string, userEmail?: string): Promise<Order[]> {

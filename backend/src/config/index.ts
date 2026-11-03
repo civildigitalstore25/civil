@@ -46,4 +46,19 @@ export const config = {
   googleServiceAccountEmail: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim() ?? '',
   googlePrivateKey: formatPrivateKey(process.env.GOOGLE_PRIVATE_KEY),
   googleDriveFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID?.trim() ?? '',
+  // Order alerts go here; falls back to the super admin address.
+  adminEmail: process.env.ADMIN_EMAIL?.trim() || process.env.SUPERADMIN_EMAIL?.trim() || '',
+  contactEmail:
+    process.env.CONTACT_EMAIL?.trim() || process.env.ADMIN_EMAIL?.trim() || process.env.SUPERADMIN_EMAIL?.trim() || '',
+  // Email images are served as hosted assets (same approach as civil-ecommerce):
+  // <EMAIL_ASSET_BASE_URL || FRONTEND_URL>/logo.png, i.e. frontend/public/logo.png.
+  // EMAIL_LOGO_URL is an optional override only.
+  emailAssetBaseUrl: (process.env.EMAIL_ASSET_BASE_URL?.trim() || process.env.FRONTEND_URL?.trim() || '').replace(/\/$/, ''),
+  emailLogoUrl: process.env.EMAIL_LOGO_URL?.trim() ?? '',
+  phonepe: {
+    env: process.env.PHONEPE_ENV?.trim() === 'production' ? 'production' : 'sandbox',
+    clientId: process.env.PHONEPE_CLIENT_ID?.trim() ?? '',
+    clientSecret: process.env.PHONEPE_CLIENT_SECRET?.trim() ?? '',
+    clientVersion: process.env.PHONEPE_CLIENT_VERSION?.trim() || '1',
+  },
 };

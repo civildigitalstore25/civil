@@ -167,14 +167,15 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setEbookPriceINR(product.ebookPriceINR || (product.price ? String(product.price) : ''));
       setEbookPriceUSD(product.ebookPriceUSD || '');
 
-      setHasLifetime(Boolean(product.hasLifetime));
+      // Legacy generic lifetime/membership prices are treated as INR when INR is empty.
+      setHasLifetime(Boolean(product.hasLifetime) || Boolean(product.lifetimePriceINR || product.lifetimePrice));
       setLifetimePrice(product.lifetimePrice || '');
-      setLifetimePriceINR(product.lifetimePriceINR || '');
+      setLifetimePriceINR(product.lifetimePriceINR || product.lifetimePrice || '');
       setLifetimePriceUSD(product.lifetimePriceUSD || '');
 
-      setHasMembership(Boolean(product.hasMembership));
+      setHasMembership(Boolean(product.hasMembership) || Boolean(product.membershipPriceINR || product.membershipPrice));
       setMembershipPrice(product.membershipPrice || '');
-      setMembershipPriceINR(product.membershipPriceINR || '');
+      setMembershipPriceINR(product.membershipPriceINR || product.membershipPrice || '');
       setMembershipPriceUSD(product.membershipPriceUSD || '');
 
       setStrikethroughPriceINR(product.strikethroughPriceINR || (product.oldPrice ? String(product.oldPrice) : ''));
@@ -441,6 +442,19 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     const calculatedPrice = enteredPrices.length ? Math.min(...enteredPrices) : 0;
     const calculatedOldPrice = Number(strikethroughPriceINR) || 0;
 
+    // Same rule as civil-ecommerce: published (non-free) products need at least one price.
+    const hasAnyPrice =
+      enteredPrices.length > 0 ||
+      Number(ebookPriceUSD) > 0 ||
+      (hasLifetime && Number(lifetimePriceUSD) > 0) ||
+      (hasMembership && Number(membershipPriceUSD) > 0) ||
+      subscriptionDurations.some((row) => Number(row.priceUSD) > 0);
+    if (!isDraftSave && !isFreeProduct && !hasAnyPrice) {
+      setError('At least one valid price is required (subscription, single purchase, lifetime, or membership).');
+      setActiveTab('pricing');
+      return;
+    }
+
     setIsSubmitting(true);
 
     const targetStatus: 'active' | 'inactive' | 'draft' = isDraftSave
@@ -493,12 +507,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       ebookPriceUSD,
 
       hasLifetime,
-      lifetimePrice,
+      // Legacy generic field kept in sync with INR for older readers.
+      lifetimePrice: hasLifetime ? lifetimePriceINR || lifetimePrice : '',
       lifetimePriceINR,
       lifetimePriceUSD,
 
       hasMembership,
-      membershipPrice,
+      membershipPrice: hasMembership ? membershipPriceINR || membershipPrice : '',
       membershipPriceINR,
       membershipPriceUSD,
 
@@ -1086,17 +1101,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 </label>
 
                 {hasLifetime && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">Lifetime Price</label>
-                      <input
-                        type="text"
-                        placeholder="4999"
-                        value={lifetimePrice}
-                        onChange={(e) => setLifetimePrice(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-extrabold"
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                     <div>
                       <label className="font-bold text-slate-700 block mb-1">Lifetime Price INR (₹)</label>
                       <input
@@ -1134,17 +1139,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 </label>
 
                 {hasMembership && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">Membership Price</label>
-                      <input
-                        type="text"
-                        placeholder="1999"
-                        value={membershipPrice}
-                        onChange={(e) => setMembershipPrice(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl font-extrabold"
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                     <div>
                       <label className="font-bold text-slate-700 block mb-1">Membership Price INR (₹)</label>
                       <input
@@ -1437,6 +1432,45 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                           value={dealMembershipPriceINR}
                           onChange={(e) => setDealMembershipPriceINR(e.target.value)}
                           className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl font-extrabold text-amber-900"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="font-bold text-amber-900 block mb-1">
+                          Deal Price USD ($)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="3.99"
+                          value={dealEbookPriceUSD}
+                          onChange={(e) => setDealEbookPriceUSD(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl font-bold text-amber-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-amber-900 block mb-1">
+                          Deal Lifetime Price USD ($)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="39.99"
+                          value={dealLifetimePriceUSD}
+                          onChange={(e) => setDealLifetimePriceUSD(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl font-bold text-amber-900"
+                        />
+                      </div>
+                      <div>
+                        <label className="font-bold text-amber-900 block mb-1">
+                          Deal Membership Price USD ($)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="19.99"
+                          value={dealMembershipPriceUSD}
+                          onChange={(e) => setDealMembershipPriceUSD(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-amber-300 rounded-xl font-bold text-amber-900"
                         />
                       </div>
                     </div>

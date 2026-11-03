@@ -3,6 +3,8 @@ import type { CartItem, AppliedCoupon, CartSummary } from '../types/cart';
 import type { Product } from '../types/product';
 import { cartService } from '../services/cartService';
 import { couponService } from '../services/couponService';
+import { apiRequest } from '../services/apiClient';
+import { isScheduleActive } from '../utils/productDisplay';
 
 interface CartContextType {
   cartItems: CartItem[];
@@ -26,6 +28,45 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     cartService.saveCart(cartItems);
   }, [cartItems]);
+
+  // Free offers (like civil-ecommerce): re-check each cart product so items whose free window is
+  // live show as ₹0. The server re-verifies the window at checkout, so this is display only.
+  const cartProductKey = cartItems.map((item) => item.productId.split('::')[0]).join('|');
+  useEffect(() => {
+    const ids = Array.from(new Set(cartProductKey.split('|').filter(Boolean)));
+    if (!ids.length) return;
+    let cancelled = false;
+    void Promise.all(
+      ids.map(async (id) => {
+        try {
+          const { response, data } = await apiRequest<{ success: boolean; product?: Partial<Product> }>(`/products/${id}`);
+          const p = response.ok ? data.product : undefined;
+          const free = Boolean(
+            p && isScheduleActive(p.isFreeProduct, p.freeProductStartDate, p.freeProductStartTime, p.freeProductEndDate, p.freeProductEndTime)
+          );
+          return [id, free] as const;
+        } catch {
+          return [id, false] as const;
+        }
+      })
+    ).then((results) => {
+      if (cancelled) return;
+      const freeIds = new Set(results.filter(([, free]) => free).map(([id]) => id));
+      if (!freeIds.size) return;
+      setCartItems((prev) => {
+        let changed = false;
+        const next = prev.map((item) => {
+          if (!freeIds.has(item.productId.split('::')[0]) || item.price === 0) return item;
+          changed = true;
+          return { ...item, oldPrice: Math.max(item.oldPrice, item.price), price: 0 };
+        });
+        return changed ? next : prev;
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [cartProductKey]);
 
   const addToCart = (product: Product, quantity: number = 1) => {
     setCartItems((prevItems) => {

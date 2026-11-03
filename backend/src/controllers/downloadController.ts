@@ -15,7 +15,7 @@ interface DownloadJwtPayload {
 
 export const generateDownloadToken = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { orderId, productId, customerEmail, orderData } = req.body;
+    const { orderId, productId, customerEmail } = req.body;
 
     if (!orderId || !productId) {
       res.status(400).json({ success: false, message: 'orderId and productId are required' });
@@ -30,63 +30,22 @@ export const generateDownloadToken = async (req: AuthRequest, res: Response): Pr
       isMongoId ? { $or: [{ orderId: cleanId }, { _id: cleanId }] } : { orderId: cleanId }
     );
 
-    // 2. If not found in DB, auto-recover/persist from client orderData (e.g. from local storage)
-    if (!order && orderData && typeof orderData === 'object') {
-      try {
-        const enrichedItems = await Promise.all(
-          (orderData.items || []).map(async (it: any) => {
-            let driveLink = it.driveLink || '';
-            let targetId = String(it.productId || it.id || '');
-
-            if (!driveLink && targetId) {
-              let prod: any = null;
-              if (/^[0-9a-fA-F]{24}$/.test(targetId)) {
-                prod = await Product.findById(targetId).select('driveLink');
-              }
-              if (!prod) {
-                prod = await Product.findOne({ slug: targetId }).select('driveLink');
-              }
-              if (!prod && it.title) {
-                prod = await Product.findOne({ name: it.title }).select('driveLink');
-              }
-              if (prod?.driveLink) {
-                driveLink = prod.driveLink;
-              }
-              if (prod?._id) {
-                targetId = prod._id.toString();
-              }
-            }
-
-            return {
-              productId: targetId,
-              title: String(it.title || it.name || 'Digital Product'),
-              price: Number(it.price) || 0,
-              quantity: Number(it.quantity) || 1,
-              image: it.image || '',
-              fileFormat: it.fileFormat || 'ZIP Download',
-              driveLink,
-            };
-          })
-        );
-
-        order = await Order.create({
-          orderId: cleanId,
-          userId: req.user?._id?.toString() || orderData.userId || 'guest_user',
-          customerName: orderData.customerName || 'Customer',
-          customerEmail: (orderData.customerEmail || customerEmail || '').toLowerCase(),
-          customerPhone: orderData.customerPhone || '',
-          shippingAddress: orderData.shippingAddress || '',
-          items: enrichedItems,
-          subtotal: Number(orderData.subtotal) || 0,
-          gst: Number(orderData.gst) || 0,
-          totalAmount: Number(orderData.totalAmount) || 0,
-          status: 'Completed',
-          paymentMethod: orderData.paymentMethod || 'UPI / QR Code',
-          paymentStatus: 'Paid',
-        });
-      } catch (recoveryErr) {
-        console.warn('Auto-recovery of order into DB produced warning:', recoveryErr);
-      }
+    // 2. Not found by reference (e.g. a stale local-storage id). NEVER create an order from client
+    //    data here - that would let anyone mint a "Paid" order. Instead, for a signed-in user, look up
+    //    an existing PAID order of theirs that contains this product. Guests must use a real order id.
+    if (!order && req.user) {
+      const pid = String(productId).trim();
+      const productIds = [pid];
+      const prod: any = /^[0-9a-fA-F]{24}$/.test(pid)
+        ? await Product.findById(pid).select('_id slug')
+        : await Product.findOne({ slug: pid.toLowerCase() }).select('_id slug');
+      if (prod?._id) productIds.push(prod._id.toString());
+      if (prod?.slug) productIds.push(prod.slug);
+      order = await Order.findOne({
+        $or: [{ userId: req.user._id.toString() }, { customerEmail: req.user.email.toLowerCase() }],
+        paymentStatus: 'Paid',
+        'items.productId': { $in: productIds },
+      }).sort({ createdAt: -1 });
     }
 
     if (!order) {
@@ -105,8 +64,8 @@ export const generateDownloadToken = async (req: AuthRequest, res: Response): Pr
       customerEmail &&
       customerEmail.trim().toLowerCase() === order.customerEmail.toLowerCase();
 
-    // If order was created without a logged-in account, allow token generation by order reference & customer
-    if (!isAdmin && !isOwner && !isGuestMatch && order.userId !== 'guest_user') {
+    // Guest orders require the matching customer email; the order reference alone is not enough.
+    if (!isAdmin && !isOwner && !isGuestMatch) {
       res.status(403).json({
         success: false,
         message: 'You are not authorized to download files for this order',
@@ -115,7 +74,9 @@ export const generateDownloadToken = async (req: AuthRequest, res: Response): Pr
     }
 
     // Check payment / order status
-    if (order.status !== 'Completed' && order.paymentStatus !== 'Paid' && !isAdmin) {
+    // Paid orders (including server-verified ₹0 free orders, which are marked Paid) unlock downloads.
+    // Cancelled/refunded orders do not, even if they were paid earlier.
+    if (!isAdmin && (order.paymentStatus !== 'Paid' || order.status === 'Cancelled')) {
       res.status(403).json({
         success: false,
         message: 'Download is only available after payment is completed',

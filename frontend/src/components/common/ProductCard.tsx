@@ -1,8 +1,19 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import type { Product } from '../../types/product';
 import { useCart } from '../../context/CartContext';
-import { displayText, reviewStats } from '../../utils/productDisplay';
+import {
+  buildAccessPlans,
+  cheapestPlan,
+  dealState,
+  displayText,
+  formatIstDateTime,
+  freeOfferState,
+  hasLiveWindow,
+  reviewStats,
+} from '../../utils/productDisplay';
+import { useNow } from '../../hooks/useNow';
+import OfferCountdown from '../product/OfferCountdown';
 
 interface ProductCardProps {
   product: Product;
@@ -10,12 +21,43 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addToCart } = useCart();
+  const navigate = useNavigate();
   const [isAdded, setIsAdded] = useState(false);
+
+  // Re-evaluate free/deal windows live so the card flips state exactly at start/end (interval cleaned up).
+  const now = useNow(hasLiveWindow(product));
+  const free = freeOfferState(product, now);
+  const deal = dealState(product, now);
+  const freeOn = free.status === 'active';
+  const dealOn = !freeOn && deal.status === 'active';
+  const plans = useMemo(() => buildAccessPlans(product), [product, free.status, deal.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  const plan = cheapestPlan(plans);
+  const price = plan?.priceINR ?? 0;
+  const compare = plan?.compareINR && plan.compareINR > price ? plan.compareINR : 0;
+  const offPercent = compare > 0 ? Math.round(((compare - price) / compare) * 100) : 0;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product, 1);
+    if (!plan || product.isOutOfStock) {
+      navigate(`/${product.slug}/`);
+      return;
+    }
+    // Same cart line as the detail page: the live plan price (deal price, or ₹0 while free).
+    addToCart(
+      {
+        ...product,
+        id: `${product.id}::${plan.id}`,
+        name: plans.length > 1 ? `${product.name} (${plan.label})` : product.name,
+        price,
+        oldPrice: compare,
+      },
+      1,
+    );
+    if (freeOn) {
+      navigate('/checkout');
+      return;
+    }
     setIsAdded(true);
     setTimeout(() => setIsAdded(false), 2500);
   };
@@ -40,6 +82,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
           {/* Badges Container */}
           <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1 z-10 max-w-[80%]">
+            {freeOn && (
+              <span className="bg-emerald-600 text-white text-[10px] sm:text-[11px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-md tracking-wider">
+                FREE
+              </span>
+            )}
+            {dealOn && (
+              <span className="bg-rose-600 text-white text-[10px] sm:text-[11px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-md tracking-wider">
+                DEAL
+              </span>
+            )}
             {product.isBestSeller && (
               <span className="bg-[#F5A623] text-white text-[10px] sm:text-[11px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-md tracking-wider">
                 BESTSELLER
@@ -100,22 +152,43 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
       {/* Price & Action */}
       <div className="pt-3 border-t border-slate-100">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-baseline gap-2">
-            <span className="text-xl font-black text-slate-900">
-              {product.price > 0 ? `₹${product.price.toLocaleString()}` : 'Price on request'}
-            </span>
-            {product.oldPrice > product.price && product.price > 0 && (
-            <span className="text-xs font-semibold text-slate-400 line-through">
-              ₹{product.oldPrice.toLocaleString()}
-            </span>
+            {freeOn ? (
+              <span className="text-xl font-black text-emerald-600">FREE</span>
+            ) : (
+              <span className="text-xl font-black text-slate-900">
+                {price > 0 ? `₹${price.toLocaleString('en-IN')}` : 'Price on request'}
+              </span>
+            )}
+            {compare > 0 && (
+              <span className="text-xs font-semibold text-slate-400 line-through">
+                ₹{compare.toLocaleString('en-IN')}
+              </span>
             )}
           </div>
 
-          {product.discountPercent > 0 && product.oldPrice > product.price && (
-          <span className="bg-[#F5A623]/15 text-[#D97706] border border-[#F5A623]/30 text-[11px] font-bold px-2 py-0.5 rounded-md">
-            -{product.discountPercent}% OFF
-          </span>
+          {offPercent > 0 && (
+            <span
+              className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${
+                freeOn
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-[#F5A623]/15 text-[#D97706] border-[#F5A623]/30'
+              }`}
+            >
+              {freeOn ? '100% OFF' : `-${offPercent}% OFF`}
+            </span>
+          )}
+        </div>
+
+        <div className="mb-3 space-y-1.5">
+          {freeOn && free.endMs !== null && <OfferCountdown targetMs={free.endMs} label="Free offer ends in" tone="free" />}
+          {dealOn && deal.endMs !== null && <OfferCountdown targetMs={deal.endMs} label="Deal ends in" tone="deal" />}
+          {!freeOn && free.status === 'upcoming' && free.startMs !== null && (
+            <p className="text-[11px] font-semibold text-emerald-700">Free from {formatIstDateTime(free.startMs)}</p>
+          )}
+          {!freeOn && !dealOn && deal.status === 'upcoming' && deal.startMs !== null && (
+            <OfferCountdown targetMs={deal.startMs} label="Deal starts in" tone="upcoming" />
           )}
         </div>
 
@@ -131,7 +204,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
             <path d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" stroke="currentColor" strokeWidth="2" fill="none" />
           </svg>
-          <span>{isAdded ? '✓ Added to Cart' : 'Add to Cart'}</span>
+          <span>{freeOn ? 'Get it Free' : isAdded ? '✓ Added to Cart' : 'Add to Cart'}</span>
         </button>
       </div>
     </div>

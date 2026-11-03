@@ -3,6 +3,8 @@ import HomePage from './pages/HomePage';
 import ProductListingPage from './pages/ProductListingPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
+import PaymentResultPage from './pages/PaymentResultPage';
+import ContactUsPage from './pages/ContactUsPage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
@@ -10,6 +12,7 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import ChangePasswordPage from './pages/auth/ChangePasswordPage';
 import AccountPage from './pages/account/AccountPage';
 import MyOrdersPage from './pages/account/MyOrdersPage';
+import OrderDetailsPage from './pages/account/OrderDetailsPage';
 import SlugResolver from './routes/SlugResolver';
 import ScrollToTop from './components/common/ScrollToTop';
 
@@ -67,6 +70,9 @@ function App() {
                   <Route path="/reset-password" element={<ResetPasswordPage />} />
                   <Route path="/cart" element={<CartPage />} />
                   <Route path="/checkout" element={<CheckoutPage />} />
+                  <Route path="/contact-us" element={<ContactUsPage />} />
+                  <Route path="/contact" element={<ContactUsPage />} />
+                  <Route path="/payment/result/:merchantOrderId" element={<PaymentResultPage />} />
                   <Route path="/products" element={<ProductListingPage />} />
 
                   {/* User Protected Routes */}
@@ -94,6 +100,24 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
+                  <Route
+                    path="/account/orders/:orderId"
+                    element={
+                      <ProtectedRoute>
+                        <OrderDetailsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/my-orders/:orderId"
+                    element={
+                      <ProtectedRoute>
+                        <OrderDetailsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
 
                   {/* Admin Protected Routes */}
                   <Route

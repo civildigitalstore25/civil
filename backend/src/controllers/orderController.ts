@@ -1,7 +1,8 @@
 import type { Response } from 'express';
 import { type AuthRequest } from '../middlewares/authMiddleware.js';
-import Order, { type IOrder, type OrderStatus } from '../models/Order.js';
+import Order, { type OrderStatus } from '../models/Order.js';
 import Product from '../models/Product.js';
+import { sendOrderStatusEmail, statusEmailKind } from '../services/emailService.js';
 
 const sanitizeOrderItem = (item: any, isAdmin: boolean) => {
   const obj = typeof item.toObject === 'function' ? item.toObject() : { ...item };
@@ -109,9 +110,11 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
       subtotal: Number(subtotal) || 0,
       gst: Number(gst) || 0,
       totalAmount: Number(totalAmount) || 0,
-      status: 'Completed', // Digital purchases are completed instantly
-      paymentMethod: paymentMethod || 'UPI / QR Code',
-      paymentStatus: 'Paid',
+      // Admin-only manual entry. Never trust client input for payment state: real paid orders
+      // are only created by the PhonePe flow (/api/payments). Admin can move it on via PATCH /:id/status.
+      status: 'Pending',
+      paymentMethod: paymentMethod || 'Manual (admin)',
+      paymentStatus: 'Pending',
     });
 
     res.status(201).json({
@@ -250,6 +253,7 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response): Promis
       ? { $or: [{ orderId: idOrOrderId }, { _id: idOrOrderId }] }
       : { orderId: idOrOrderId };
 
+    const previous = await Order.findOne(filter).select('status');
     const order = await Order.findOneAndUpdate(
       filter,
       { status },
@@ -259,6 +263,12 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response): Promis
     if (!order) {
       res.status(404).json({ success: false, message: 'Order not found' });
       return;
+    }
+
+    // Notify the customer only when the status really changed. Email errors are logged, never fatal.
+    const kind = previous ? statusEmailKind(previous.status, order.status) : null;
+    if (kind) {
+      void sendOrderStatusEmail(order.toObject() as any, kind);
     }
 
     res.json({

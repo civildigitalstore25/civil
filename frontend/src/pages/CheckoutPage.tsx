@@ -7,19 +7,17 @@ import Footer from '../components/layout/Footer';
 import WhatsAppButton from '../components/common/WhatsAppButton';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../hooks/useAuth';
-import { orderService } from '../services/orderService';
-import type { OrderItem } from '../types/order';
+import { paymentService } from '../services/paymentService';
 
 export const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
-  const { cartItems, summary, clearCart } = useCart();
+  const { cartItems, summary, appliedCoupon } = useCart();
   const { currentUser } = useAuth();
 
   const [customerName, setCustomerName] = useState(currentUser?.name || '');
   const [customerEmail, setCustomerEmail] = useState(currentUser?.email || '');
   const [customerPhone, setCustomerPhone] = useState(currentUser?.phone || '');
   const [shippingAddress, setShippingAddress] = useState('123 Civil Digital Hub, India');
-  const [paymentMethod, setPaymentMethod] = useState('UPI / QR Code');
 
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -60,41 +58,39 @@ export const CheckoutPage: React.FC = () => {
       return;
     }
 
+    if (isProcessing) return;
     setError(null);
     setIsProcessing(true);
 
-    const orderItems: OrderItem[] = cartItems.map((item) => ({
-      id: item.id,
-      productId: item.productId,
-      title: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      image: item.image,
-      fileFormat: item.format,
-    }));
-
     try {
-      // Save order locally and sync to MongoDB database
-      await orderService.createOrderAsync({
-        userId: currentUser?.id || 'guest_user',
+      // Single pay action (like civil-ecommerce): the backend creates a Pending order,
+      // starts the PhonePe checkout and returns its redirect URL.
+      const result = await paymentService.initiate({
         customerName: customerName.trim(),
         customerEmail: customerEmail.trim(),
         customerPhone: customerPhone.trim(),
         shippingAddress: shippingAddress.trim(),
-        items: orderItems,
-        subtotal: summary.subtotal,
-        gst: summary.gst,
-        totalAmount: summary.totalPayable,
-        status: 'Completed', // Instant digital download auto completes
-        paymentMethod,
+        ...(appliedCoupon?.code ? { couponCode: appliedCoupon.code } : {}),
+        items: cartItems.map((item) => ({
+          productId: item.id || item.productId,
+          title: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image,
+          fileFormat: item.format,
+        })),
       });
 
-      clearCart();
-      setIsProcessing(false);
-      navigate('/account/orders');
+      if (result.freeCheckout && result.merchantOrderId) {
+        navigate(`/payment/result/${encodeURIComponent(result.merchantOrderId)}`);
+        return;
+      }
+
+      // Hand off to the PhonePe hosted payment page. Keep the loading state while the browser navigates.
+      window.location.assign(result.redirectUrl as string);
     } catch (err: any) {
-      console.error('Order creation error:', err);
-      setError(err.message || 'Failed to complete order. Please try again.');
+      console.error('PhonePe payment initiation error:', err);
+      setError(err?.message || 'Unable to start PhonePe payment. Please try again.');
       setIsProcessing(false);
     }
   };
@@ -157,7 +153,7 @@ export const CheckoutPage: React.FC = () => {
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block mb-1.5">Phone Number (For payment receipt) *</label>
+                      <label className="block mb-1.5">Phone Number</label>
                       <input
                         type="tel"
                         required
@@ -181,35 +177,8 @@ export const CheckoutPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="border-t border-slate-100 pt-6">
-                  <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-400 mb-4">2. Select Payment Method</h3>
-                  
-                  <div className="space-y-3">
-                    {[
-                      'UPI / QR Code',
-                      'UPI / GooglePay / PhonePe',
-                      'Credit / Debit Card',
-                      'Net Banking',
-                    ].map((method) => (
-                      <label
-                        key={method}
-                        className={`flex items-center gap-3 p-3.5 rounded-2xl border text-xs font-bold cursor-pointer transition-all ${
-                          paymentMethod === method
-                            ? 'bg-amber-50/50 border-[#F5A623] text-slate-900 shadow-xs'
-                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100/50'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="payment"
-                          checked={paymentMethod === method}
-                          onChange={() => setPaymentMethod(method)}
-                          className="w-4 h-4 text-[#F5A623] focus:ring-[#F5A623]"
-                        />
-                        <span>{method}</span>
-                      </label>
-                    ))}
-                  </div>
+                <div className="flex items-center gap-2 p-3.5 rounded-2xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-600">
+                  <span>Secure payment via PhonePe (UPI, Cards, Net Banking). You will be redirected to complete the payment.</span>
                 </div>
 
                 <button
@@ -220,10 +189,10 @@ export const CheckoutPage: React.FC = () => {
                   {isProcessing ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Processing Payment & Order...</span>
+                      <span>Redirecting to PhonePe...</span>
                     </>
                   ) : (
-                    <span>Pay ₹{summary.totalPayable.toLocaleString('en-IN')} & Download Instantly</span>
+                    <span>{summary.totalPayable > 0 ? `Pay \u20b9${summary.totalPayable.toLocaleString('en-IN')} & Download Instantly` : 'Get for Free & Download Instantly'}</span>
                   )}
                 </button>
               </form>

@@ -24,11 +24,10 @@ export const downloadService = {
     try {
       const orderId = typeof order === 'string' ? order : (order.orderId || order.id);
       const email = typeof order === 'string' ? customerEmail : (customerEmail || order.customerEmail);
-      const orderData = typeof order === 'object' ? order : undefined;
 
       const { response, data } = await apiRequest<DownloadTokenResponse>('/downloads/generate-token', {
         method: 'POST',
-        body: JSON.stringify({ orderId, productId, customerEmail: email, orderData }),
+        body: JSON.stringify({ orderId, productId, customerEmail: email }),
       });
 
       if (!response.ok || !data.success || !data.downloadUrl) {
