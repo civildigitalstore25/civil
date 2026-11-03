@@ -17,7 +17,7 @@ export const CheckoutPage: React.FC = () => {
   const [customerName, setCustomerName] = useState(currentUser?.name || '');
   const [customerEmail, setCustomerEmail] = useState(currentUser?.email || '');
   const [customerPhone, setCustomerPhone] = useState(currentUser?.phone || '');
-  const [shippingAddress, setShippingAddress] = useState('123 Civil Digital Hub, India');
+  const [shippingAddress, setShippingAddress] = useState('');
 
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);

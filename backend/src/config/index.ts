@@ -56,9 +56,13 @@ export const config = {
   emailAssetBaseUrl: (process.env.EMAIL_ASSET_BASE_URL?.trim() || process.env.FRONTEND_URL?.trim() || '').replace(/\/$/, ''),
   emailLogoUrl: process.env.EMAIL_LOGO_URL?.trim() ?? '',
   phonepe: {
-    env: process.env.PHONEPE_ENV?.trim() === 'production' ? 'production' : 'sandbox',
+    env: process.env.PHONEPE_ENV?.trim().toUpperCase() === 'PRODUCTION' ? 'production' : 'sandbox',
     clientId: process.env.PHONEPE_CLIENT_ID?.trim() ?? '',
     clientSecret: process.env.PHONEPE_CLIENT_SECRET?.trim() ?? '',
     clientVersion: process.env.PHONEPE_CLIENT_VERSION?.trim() || '1',
+    // Production (PG V1, live dashboard): API key + key index
+    merchantId: process.env.PHONEPE_MERCHANT_ID?.trim() ?? '',
+    apiKey: process.env.PHONEPE_API_KEY?.trim() ?? '',
+    keyIndex: process.env.PHONEPE_KEY_INDEX?.trim() || '1',
   },
 };

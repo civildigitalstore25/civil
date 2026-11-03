@@ -11,6 +11,8 @@ import {
   createPhonePePayment,
   getPhonePeOrderStatus,
   phonepeConfigured,
+  phonepeMissingConfigMessage,
+  extractWebhookMerchantOrderId,
 } from '../services/phonepeService.js';
 import { sendAdminOrderAlertEmail, sendOrderConfirmationEmail, sendOrderStatusEmail } from '../services/emailService.js';
 
@@ -235,7 +237,7 @@ export const initiatePhonePePayment = async (req: AuthRequest, res: Response): P
       res.status(503).json({
         success: false,
         message:
-          'PhonePe is not configured. Add PHONEPE_CLIENT_ID, PHONEPE_CLIENT_SECRET and PHONEPE_CLIENT_VERSION to backend/.env.local.',
+          phonepeMissingConfigMessage(),
       });
       return;
     }
@@ -343,8 +345,7 @@ export const getPhonePePaymentStatus = async (req: AuthRequest, res: Response): 
  */
 export const phonePeWebhook = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const payload = (req.body?.payload || req.body || {}) as { merchantOrderId?: string };
-    const merchantOrderId = String(payload.merchantOrderId || '');
+    const merchantOrderId = extractWebhookMerchantOrderId(req.body);
     if (!MERCHANT_ORDER_PATTERN.test(merchantOrderId)) {
       res.status(400).json({ success: false, message: 'Invalid payment reference.' });
       return;
