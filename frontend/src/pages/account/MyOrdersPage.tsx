@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { AlertCircle, ArrowLeft, ChevronRight, Download, PackageOpen, Receipt, Search, Wallet, X } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { AlertCircle, ArrowLeft, CheckCircle2, ChevronRight, Download, PackageOpen, Receipt, Search, Wallet, X } from 'lucide-react';
 import AnnouncementBar from '../../components/layout/AnnouncementBar';
 import Header from '../../components/layout/Header';
 import Navbar from '../../components/layout/Navbar';
@@ -30,6 +30,10 @@ const Skeleton = () => (
 
 export const MyOrdersPage: React.FC = () => {
   const { currentUser } = useAuth();
+  const location = useLocation();
+  const [successNotice, setSuccessNotice] = useState<string | null>(
+    (location.state as any)?.paymentSuccess || null
+  );
   const [orders, setOrders] = useState<Order[]>(() => orderService.getUserOrders(currentUser?.id, currentUser?.email));
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -106,6 +110,23 @@ export const MyOrdersPage: React.FC = () => {
             <p className="text-xs text-slate-500 sm:text-sm">Track your purchases, download files and view invoices.</p>
           </div>
         </div>
+
+        {successNotice && (
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs sm:text-sm font-bold text-emerald-800 animate-fade-in shadow-2xs">
+            <span className="flex items-center gap-2.5">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+              <span>{successNotice}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setSuccessNotice(null)}
+              className="text-emerald-700 hover:text-emerald-950 p-1 rounded-lg hover:bg-emerald-100 transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-3 gap-3">
           {[

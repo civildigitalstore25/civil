@@ -144,8 +144,8 @@ export const Footer: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-[11px] font-semibold text-slate-400">Email Support</div>
-                  <a href="mailto:support@civildigitalstore.in" className="text-slate-200 font-bold hover:text-[#F5A623] transition-colors">
-                    support@civildigitalstore.in
+                  <a href="mailto:civildigitalstore25@gmail.com" className="text-slate-200 font-bold hover:text-[#F5A623] transition-colors">
+                    civildigitalstore25@gmail.com
                   </a>
                 </div>
               </div>

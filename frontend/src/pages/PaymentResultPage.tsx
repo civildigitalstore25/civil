@@ -1,21 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import AnnouncementBar from '../components/layout/AnnouncementBar';
 import Header from '../components/layout/Header';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import { useCart } from '../context/CartContext';
 import { paymentService, type PaymentStatusOrder } from '../services/paymentService';
+import { orderService } from '../services/orderService';
 
 const MAX_PENDING_CHECKS = 10;
 const CHECK_INTERVAL_MS = 3000;
+const AUTO_REDIRECT_SECONDS = 3;
 
 export const PaymentResultPage: React.FC = () => {
   const { merchantOrderId = '' } = useParams();
+  const navigate = useNavigate();
   const { clearCart } = useCart();
   const [order, setOrder] = useState<PaymentStatusOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [checks, setChecks] = useState(0);
+  const [countdown, setCountdown] = useState(AUTO_REDIRECT_SECONDS);
   const clearedRef = useRef(false);
 
   useEffect(() => {
@@ -32,6 +36,15 @@ export const PaymentResultPage: React.FC = () => {
         if (latest.paymentStatus === 'Paid' && !clearedRef.current) {
           clearedRef.current = true;
           clearCart();
+          try {
+            const existing = orderService.getOrders();
+            const exists = existing.some((o) => o.id === latest.orderId || o.orderId === latest.orderId);
+            if (!exists) {
+              orderService.saveOrders([latest as any, ...existing]);
+            }
+          } catch {
+            // ignore localStorage error
+          }
         }
         if (latest.paymentStatus === 'Pending' && attempt < MAX_PENDING_CHECKS) {
           timer = setTimeout(() => void check(attempt + 1), CHECK_INTERVAL_MS);
@@ -52,6 +65,40 @@ export const PaymentResultPage: React.FC = () => {
   const paid = order?.paymentStatus === 'Paid';
   const failed = order?.paymentStatus === 'Failed';
   const pending = !error && (!order || order.paymentStatus === 'Pending');
+
+  // Automatic redirect countdown to My Orders once payment is confirmed
+  useEffect(() => {
+    if (!paid || !order) return;
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          navigate('/account/orders', {
+            replace: true,
+            state: {
+              paymentSuccess: `Payment successful for Order #${order.orderId}! Your files are ready to download below.`,
+            },
+          });
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [paid, order, navigate]);
+
+  const handleGoToOrders = () => {
+    navigate('/account/orders', {
+      replace: true,
+      state: {
+        paymentSuccess: order
+          ? `Payment successful for Order #${order.orderId}! Your files are ready to download below.`
+          : undefined,
+      },
+    });
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
@@ -75,18 +122,55 @@ export const PaymentResultPage: React.FC = () => {
         )}
 
         {paid && order && (
-          <>
-            <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto text-4xl text-emerald-600">
+          <div className="space-y-6 animate-fade-in">
+            <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto text-4xl text-emerald-600 shadow-xs">
               &#10003;
             </div>
-            <h2 className="text-2xl font-extrabold">Payment Successful</h2>
-            <p className="text-xs text-slate-500">
-              Order <span className="font-bold">{order.orderId}</span> is confirmed. Your downloads are available in My Orders.
-            </p>
-            <Link to="/account/orders" className="inline-block bg-[#F5A623] text-white font-extrabold text-xs px-6 py-3 rounded-xl shadow-md">
-              Go to My Orders
-            </Link>
-          </>
+            <div className="space-y-2">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Payment Successful!</h2>
+              <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
+                Thank you! Your order <span className="font-bold text-slate-800">#{order.orderId}</span> is confirmed.
+              </p>
+            </div>
+
+            {/* Purchased Items Preview */}
+            {order.items && order.items.length > 0 && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 text-left divide-y divide-slate-100 shadow-2xs max-w-lg mx-auto">
+                <div className="pb-2.5 text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
+                  Purchased Products ({order.items.length})
+                </div>
+                {order.items.map((item, idx) => (
+                  <div key={idx} className="py-3 flex items-center justify-between gap-3 text-xs sm:text-sm">
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 truncate">{item.title}</p>
+                      <p className="text-[11px] font-semibold text-emerald-600">✓ Download ready in My Orders</p>
+                    </div>
+                    <span className="font-extrabold text-slate-900 shrink-0">
+                      ₹{Number(item.price * item.quantity).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Countdown notice & Direct Navigate button */}
+            <div className="space-y-4 pt-2">
+              <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 bg-emerald-50 border border-emerald-200 py-2 px-4 rounded-full">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                <span>Redirecting to My Orders in <strong className="text-emerald-800">{countdown}s</strong>...</span>
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  onClick={handleGoToOrders}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#F5A623] hover:bg-[#e0951a] text-white font-extrabold text-xs sm:text-sm px-8 py-3.5 rounded-xl shadow-md transition-all cursor-pointer"
+                >
+                  Go to My Orders & Download Files &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {(failed || error) && (

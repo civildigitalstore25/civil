@@ -142,7 +142,7 @@ export const generateDownloadToken = async (req: AuthRequest, res: Response): Pr
     if (!driveLink) {
       res.status(404).json({
         success: false,
-        message: `Digital download file is not configured for "${item.title}". Please contact support at softzcart@gmail.com.`,
+        message: `Digital download file is not configured for "${item.title}". Please contact support at civildigitalstore25@gmail.com.`,
       });
       return;
     }

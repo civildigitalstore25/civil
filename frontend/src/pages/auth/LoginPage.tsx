@@ -105,7 +105,7 @@ export const LoginPage: React.FC = () => {
           <AuthInput
             label="Email or Phone"
             type="text"
-            placeholder="admin@civildigitalstore.com or 9876543210"
+            placeholder="Enter email or phone"
             value={identifier}
             onChange={(e) => {
               setIdentifier(e.target.value);

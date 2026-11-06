@@ -123,7 +123,7 @@ export const ContactUsPage: React.FC = () => {
               </p>
             </div>
             <div className="text-xs font-bold text-slate-800 pt-2 border-t border-slate-100">
-              Email: <a href="mailto:civildigitalstore@gmail.com" className="hover:text-[#F5A623]">civildigitalstore@gmail.com</a>
+              Email: <a href="mailto:civildigitalstore25@gmail.com" className="hover:text-[#F5A623]">civildigitalstore25@gmail.com</a>
             </div>
           </div>
 

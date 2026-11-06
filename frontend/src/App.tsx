@@ -117,6 +117,10 @@ function App() {
                       </ProtectedRoute>
                     }
                   />
+                  <Route
+                    path="/my-orders"
+                    element={<Navigate to="/account/orders" replace />}
+                  />
 
 
                   {/* Admin Protected Routes */}

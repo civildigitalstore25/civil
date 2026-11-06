@@ -111,7 +111,7 @@ export const ShippingPolicyPage: React.FC = () => {
 
               <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-1">
                 <span className="text-xs font-bold text-slate-400 uppercase">Email</span>
-                <p className="font-bold text-slate-900 text-xs sm:text-sm truncate">civildigitalstore@gmail.com</p>
+                <p className="font-bold text-slate-900 text-xs sm:text-sm truncate">civildigitalstore25@gmail.com</p>
               </div>
 
               <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-1">
