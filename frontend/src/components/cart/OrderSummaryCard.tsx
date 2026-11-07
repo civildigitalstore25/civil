@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { CartSummary } from '../../types/cart';
+import { useAuth } from '../../hooks/useAuth';
 
 interface OrderSummaryCardProps {
   summary: CartSummary;
@@ -8,6 +9,7 @@ interface OrderSummaryCardProps {
 
 export const OrderSummaryCard: React.FC<OrderSummaryCardProps> = ({ summary }) => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const formattedSubtotal = summary.subtotal.toLocaleString('en-IN');
   const formattedSavings = summary.savings.toLocaleString('en-IN');
   const formattedGst = summary.gst.toLocaleString('en-IN');
@@ -82,12 +84,24 @@ export const OrderSummaryCard: React.FC<OrderSummaryCardProps> = ({ summary }) =
         {/* Checkout Button */}
         <button
           type="button"
-          onClick={() => navigate('/checkout')}
+          onClick={() => {
+            if (!isAuthenticated) {
+              navigate('/login', { state: { from: '/checkout' } });
+            } else {
+              navigate('/checkout');
+            }
+          }}
           className="w-full bg-[#F5A623] hover:bg-[#e0951a] text-white font-extrabold text-sm sm:text-base py-3.5 px-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
         >
-          <span>Proceed to Checkout</span>
+          <span>{isAuthenticated ? 'Proceed to Checkout' : 'Sign in to Checkout'}</span>
           <span className="text-lg leading-none">→</span>
         </button>
+
+        {!isAuthenticated && (
+          <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200/80 rounded-xl p-2.5 text-center font-medium">
+            🔒 Account required to download purchases. Please sign in to proceed.
+          </p>
+        )}
 
         {/* WhatsApp Button */}
         <a

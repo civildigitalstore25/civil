@@ -152,6 +152,14 @@ const markResult = async (
 /** POST /api/payments/phonepe/initiate - creates a Pending order and returns the PhonePe checkout URL. */
 export const initiatePhonePePayment = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!req.user) {
+      res.status(401).json({
+        success: false,
+        message: 'Please sign in to proceed with checkout and download your products.',
+      });
+      return;
+    }
+
     const customerName = String(req.body?.customerName || '').trim();
     const customerEmail = String(req.body?.customerEmail || '').trim().toLowerCase();
     const customerPhone = String(req.body?.customerPhone || '').trim();
@@ -246,9 +254,9 @@ export const initiatePhonePePayment = async (req: AuthRequest, res: Response): P
     const isFree = amountPaise === 0;
     const order = await Order.create({
       orderId: merchantOrderId,
-      userId: req.user?._id?.toString() || 'guest_user',
-      customerName,
-      customerEmail,
+      userId: req.user._id.toString(),
+      customerName: customerName || req.user.name,
+      customerEmail: req.user.email || customerEmail,
       customerPhone,
       shippingAddress,
       items: orderItems,

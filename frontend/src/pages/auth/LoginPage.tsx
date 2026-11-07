@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import AuthLayout from '../../components/auth/AuthLayout';
 import AuthInput from '../../components/auth/AuthInput';
 import PasswordInput from '../../components/auth/PasswordInput';
@@ -10,7 +10,16 @@ import { AUTH_ROUTES, AUTH_SUCCESS_MESSAGES } from '../../constants/auth';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, googleSignIn } = useAuth();
+
+  const fromLocation = (location.state as any)?.from;
+  const redirectTarget =
+    typeof fromLocation === 'string'
+      ? fromLocation
+      : fromLocation?.pathname
+      ? `${fromLocation.pathname}${fromLocation.search || ''}`
+      : AUTH_ROUTES.home;
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -48,7 +57,7 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
-    navigate(AUTH_ROUTES.home, {
+    navigate(redirectTarget, {
       replace: true,
       state: { authMessage: AUTH_SUCCESS_MESSAGES.login },
     });
@@ -61,7 +70,7 @@ export const LoginPage: React.FC = () => {
       setErrors({ general: result.error || 'Google sign-in failed.' });
       return;
     }
-    navigate(AUTH_ROUTES.home, {
+    navigate(redirectTarget, {
       replace: true,
       state: { authMessage: AUTH_SUCCESS_MESSAGES.google },
     });
@@ -77,6 +86,12 @@ export const LoginPage: React.FC = () => {
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
             </svg>
             <span>{errors.general}</span>
+          </div>
+        )}
+
+        {fromLocation && (
+          <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold rounded-xl flex items-center gap-2 animate-fade-in">
+            <span>🔒 Please sign in to complete your checkout and access your downloads.</span>
           </div>
         )}
 
@@ -163,6 +178,7 @@ export const LoginPage: React.FC = () => {
           Don't have an account?{' '}
           <Link
             to="/register"
+            state={{ from: fromLocation }}
             className="text-[#F5A000] hover:text-amber-600 font-bold transition-colors"
           >
             Create Account

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import AnnouncementBar from '../components/layout/AnnouncementBar';
 import Header from '../components/layout/Header';
 import Navbar from '../components/layout/Navbar';
@@ -11,8 +11,9 @@ import { paymentService } from '../services/paymentService';
 
 export const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { cartItems, summary, appliedCoupon } = useCart();
-  const { currentUser } = useAuth();
+  const { currentUser, isAuthenticated } = useAuth();
 
   const [customerName, setCustomerName] = useState(currentUser?.name || '');
   const [customerEmail, setCustomerEmail] = useState(currentUser?.email || '');
@@ -21,6 +22,18 @@ export const CheckoutPage: React.FC = () => {
 
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  useEffect(() => {
+    if (currentUser) {
+      if (!customerName && currentUser.name) setCustomerName(currentUser.name);
+      if (!customerEmail && currentUser.email) setCustomerEmail(currentUser.email);
+      if (!customerPhone && currentUser.phone) setCustomerPhone(currentUser.phone);
+    }
+  }, [currentUser]);
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
 
   if (cartItems.length === 0) {
     return (
@@ -123,6 +136,19 @@ export const CheckoutPage: React.FC = () => {
             
             {/* Form Left Side */}
             <div className="lg:col-span-7 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
+              {currentUser && (
+                <div className="p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                    <span className="text-slate-600">
+                      Signed in as <strong className="text-slate-900">{currentUser.name}</strong> ({currentUser.email})
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md self-start sm:self-auto">
+                    Downloads linked to your account
+                  </span>
+                </div>
+              )}
               
               <form onSubmit={handleCheckoutSubmit} className="space-y-6">
                 <div>
