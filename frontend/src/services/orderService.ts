@@ -139,6 +139,86 @@ export const orderService = {
 
     return { success: true, order: updatedOrder };
   },
+
+  importOrders(imported: Partial<Order>[]): { inserted: number; updated: number; orders: Order[] } {
+    const currentOrders = this.getOrders();
+    const map = new Map<string, Order>();
+    currentOrders.forEach((o) => {
+      map.set(o.id, o);
+      if (o.orderId) map.set(o.orderId, o);
+    });
+
+    let inserted = 0;
+    let updated = 0;
+
+    for (const item of imported) {
+      const orderId = String(
+        item.id || item.orderId || `ORD-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`
+      ).trim();
+      const existing = map.get(orderId);
+
+      const normalizedStatus: OrderStatus = (() => {
+        const s = (item.status || '').toLowerCase().trim();
+        if (s === 'completed' || s === 'paid' || s === 'success' || s === 'delivered') return 'Completed';
+        if (s === 'processing' || s === 'in progress') return 'Processing';
+        if (s === 'cancelled' || s === 'canceled' || s === 'failed' || s === 'rejected') return 'Cancelled';
+        return 'Pending';
+      })();
+
+      const totalVal = Number(item.totalAmount ?? (existing?.totalAmount ?? 0));
+      const subtotalVal = Number(item.subtotal ?? (existing?.subtotal ?? Math.round(totalVal / 1.18)));
+      const gstVal = Number(item.gst ?? (existing?.gst ?? (totalVal - subtotalVal)));
+
+      const orderObj: Order = {
+        id: orderId,
+        orderId,
+        userId: item.userId || existing?.userId || 'guest_user',
+        customerName: item.customerName || existing?.customerName || 'Valued Customer',
+        customerEmail: item.customerEmail || existing?.customerEmail || '',
+        customerPhone: item.customerPhone || existing?.customerPhone || '',
+        shippingAddress: item.shippingAddress !== undefined ? item.shippingAddress : (existing?.shippingAddress || ''),
+        items: item.items && item.items.length > 0 ? item.items : (existing?.items || [
+          {
+            productId: 'imported-product',
+            title: 'Civil Engineering Package',
+            price: totalVal,
+            quantity: 1,
+            fileFormat: 'ZIP Download',
+            hasDownload: true,
+          }
+        ]),
+        subtotal: subtotalVal,
+        gst: gstVal,
+        totalAmount: totalVal,
+        status: normalizedStatus,
+        paymentMethod: item.paymentMethod || existing?.paymentMethod || 'Online',
+        paymentStatus: item.paymentStatus || (normalizedStatus === 'Completed' ? 'Paid' : 'Pending'),
+        createdAt: item.createdAt || existing?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (existing) {
+        updated++;
+      } else {
+        inserted++;
+      }
+      map.set(orderId, orderObj);
+
+      // Best effort backend sync for status
+      void apiRequest(`/orders/${orderId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: normalizedStatus }),
+      }).catch(() => {});
+    }
+
+    // Deduplicate unique orders
+    const uniqueOrders = Array.from(new Set(map.values())).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    this.saveOrders(uniqueOrders);
+    return { inserted, updated, orders: uniqueOrders };
+  },
 };
 
 export default orderService;

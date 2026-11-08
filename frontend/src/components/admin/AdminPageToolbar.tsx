@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileCode, FileSpreadsheet, RotateCcw, Search } from 'lucide-react';
+import { FileCode, FileSpreadsheet, RotateCcw, Search, Upload } from 'lucide-react';
 
 export const adminButtonClass = {
   primary:
@@ -8,6 +8,8 @@ export const adminButtonClass = {
     'inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50',
   excel:
     'inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 text-xs font-bold text-emerald-800 transition-colors hover:bg-emerald-100',
+  import:
+    'inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3.5 text-xs font-bold text-blue-800 transition-colors hover:bg-blue-100',
   json:
     'inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50',
 } as const;
@@ -32,6 +34,7 @@ interface AdminPageToolbarProps {
   extra?: React.ReactNode;
   onClear?: () => void;
   onExportExcel?: () => void;
+  onImportExcel?: () => void;
   onExportJson?: () => void;
   actions?: React.ReactNode;
 }
@@ -48,6 +51,7 @@ export const AdminPageToolbar: React.FC<AdminPageToolbarProps> = ({
   extra,
   onClear,
   onExportExcel,
+  onImportExcel,
   onExportJson,
   actions,
 }) => {
@@ -69,6 +73,12 @@ export const AdminPageToolbar: React.FC<AdminPageToolbarProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+          {onImportExcel && (
+            <button type="button" onClick={onImportExcel} className={adminButtonClass.import}>
+              <Upload className="h-4 w-4" />
+              <span>Import Excel</span>
+            </button>
+          )}
           {onExportExcel && (
             <button type="button" onClick={onExportExcel} className={adminButtonClass.excel}>
               <FileSpreadsheet className="h-4 w-4" />
