@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { AlertCircle, ArrowLeft, CheckCircle2, Circle, CreditCard, MessageCircle, Printer, User, XCircle } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2, Circle, CreditCard, Printer, User, XCircle } from 'lucide-react';
 import AnnouncementBar from '../../components/layout/AnnouncementBar';
 import Header from '../../components/layout/Header';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
+import WhatsAppIcon from '../../components/common/WhatsAppIcon';
 import { orderService } from '../../services/orderService';
 import type { Order } from '../../types/order';
 import {
@@ -138,8 +139,13 @@ export const OrderDetailsPage: React.FC = () => {
           <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-extrabold text-slate-700 hover:border-[#F5A623]">
             <Printer className="h-4 w-4" /> Download invoice
           </button>
-          <a href={`https://wa.me/${SUPPORT_WHATSAPP}?text=${waText}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-extrabold text-white hover:bg-emerald-700">
-            <MessageCircle className="h-4 w-4" /> Support
+          <a
+            href={`https://wa.me/${SUPPORT_WHATSAPP}?text=${waText}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] px-4 py-2 text-xs font-extrabold text-white shadow-xs transition-colors"
+          >
+            <WhatsAppIcon className="h-4 w-4 fill-white" /> WhatsApp Support
           </a>
         </div>
       </div>

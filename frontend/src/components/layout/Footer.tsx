@@ -2,6 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import logoImg from '../../assets/logo_white_text.png';
 import { useBackendBrands } from '../../hooks/useBackendBrands';
+import { OfficialSocialButtons, OfficialSocialBadges } from '../common/SocialLinks';
+import WhatsAppIcon from '../common/WhatsAppIcon';
 
 export const Footer: React.FC = () => {
   const { brands } = useBackendBrands();
@@ -46,6 +48,14 @@ export const Footer: React.FC = () => {
                 <div className="text-base sm:text-lg font-extrabold text-[#F5A623]">24/7</div>
                 <div className="text-[11px] font-medium text-slate-400">Support</div>
               </div>
+            </div>
+
+            {/* Social Media Links in Official Brand Colors */}
+            <div className="pt-2 space-y-2.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-white block">
+                Follow Us On Social Media
+              </span>
+              <OfficialSocialButtons size="md" />
             </div>
           </div>
 
@@ -151,14 +161,12 @@ export const Footer: React.FC = () => {
               </div>
 
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-[#162235] text-[#F5A623] shrink-0 mt-0.5">
-                  <svg className="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
+                <div className="p-2 rounded-lg bg-[#25D366]/15 text-[#25D366] shrink-0 mt-0.5 border border-[#25D366]/30">
+                  <WhatsAppIcon className="w-4 h-4 fill-current" />
                 </div>
                 <div>
                   <div className="text-[11px] font-semibold text-slate-400">Call / WhatsApp</div>
-                  <a href="https://wa.me/918807423228" target="_blank" rel="noreferrer" className="text-slate-200 font-bold hover:text-[#F5A623] transition-colors">
+                  <a href="https://wa.me/918807423228" target="_blank" rel="noreferrer" className="text-slate-200 font-bold hover:text-[#25D366] transition-colors">
                     +91 88074 23228
                   </a>
                 </div>
@@ -170,11 +178,9 @@ export const Footer: React.FC = () => {
               href="https://wa.me/918807423228"
               target="_blank"
               rel="noreferrer"
-              className="w-full bg-[#22C55E] hover:bg-[#16a34a] text-white font-bold text-xs sm:text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-all duration-200 cursor-pointer"
+              className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-extrabold text-xs sm:text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-[#25D366]/20 transition-all duration-200 cursor-pointer"
             >
-              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />
-              </svg>
+              <WhatsAppIcon className="w-5 h-5 fill-white" />
               <span>Chat on WhatsApp</span>
             </a>
 
@@ -207,11 +213,18 @@ export const Footer: React.FC = () => {
             © 2026 <span className="text-slate-200 font-bold">Civil DigitalStore</span>. All Rights Reserved. Instant Download & Lifetime Access.
           </div>
           
-          <div className="flex items-center gap-3 text-slate-400">
-            <span className="bg-[#162235] px-2.5 py-1 rounded text-[10px] font-bold border border-slate-800">VISA</span>
-            <span className="bg-[#162235] px-2.5 py-1 rounded text-[10px] font-bold border border-slate-800">MasterCard</span>
-            <span className="bg-[#162235] px-2.5 py-1 rounded text-[10px] font-bold border border-slate-800">UPI</span>
-            <span className="bg-[#162235] px-2.5 py-1 rounded text-[10px] font-bold border border-slate-800">Razorpay</span>
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-4 text-slate-400">
+            <div className="flex items-center gap-2.5 pr-2 sm:border-r border-slate-800">
+              <span className="text-[11px] font-semibold text-slate-400 hidden sm:inline">Follow Us:</span>
+              <OfficialSocialBadges />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="bg-[#162235] px-2.5 py-1 rounded text-[10px] font-bold border border-slate-800">VISA</span>
+              <span className="bg-[#162235] px-2.5 py-1 rounded text-[10px] font-bold border border-slate-800">MasterCard</span>
+              <span className="bg-[#162235] px-2.5 py-1 rounded text-[10px] font-bold border border-slate-800">UPI</span>
+              <span className="bg-[#162235] px-2.5 py-1 rounded text-[10px] font-bold border border-slate-800">Razorpay</span>
+            </div>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import logoWhite from '../../assets/logo_white_text.png';
 import { useAuth } from '../../hooks/useAuth';
+import { useProducts } from '../../context/ProductContext';
 
 interface AdminSidebarProps {
   mobileOpen?: boolean;
@@ -10,8 +11,12 @@ interface AdminSidebarProps {
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobileOpen }) => {
   const { logout, currentUser } = useAuth();
+  const { products } = useProducts();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+
+  const totalProductsCount = products.length;
+  const draftProductsCount = products.filter((p) => p.status === 'draft').length;
 
   const handleLogout = () => {
     logout();
@@ -23,6 +28,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
       key: 'dashboard',
       name: 'Dashboard',
       path: '/admin/dashboard',
+      badge: undefined as number | undefined,
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -33,6 +39,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
       key: 'products',
       name: 'Products',
       path: '/admin/products',
+      badge: totalProductsCount,
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
@@ -43,6 +50,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
       key: 'draft-products',
       name: 'Draft Products',
       path: '/admin/products/drafts',
+      badge: draftProductsCount > 0 ? draftProductsCount : undefined,
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -195,7 +203,21 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
             }}
           >
             {item.icon}
-            <span>{item.name}</span>
+            <span className="truncate">{item.name}</span>
+            {item.badge !== undefined && (
+              <span
+                className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-extrabold ${
+                  (item.path === '/admin/products' && (pathname === '/admin/products' || /^\/admin\/products\/(add|.+\/edit)$/.test(pathname))) ||
+                  (item.path === pathname)
+                    ? 'bg-slate-950/20 text-slate-950'
+                    : item.key === 'draft-products'
+                    ? 'bg-purple-500/25 text-purple-300 border border-purple-500/40'
+                    : 'bg-slate-800 text-slate-300'
+                }`}
+              >
+                {item.badge}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

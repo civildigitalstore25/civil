@@ -1,3 +1,5 @@
+import { OfficialSocialBadges } from '../common/SocialLinks';
+
 export const AnnouncementBar = () => {
   return (
     <div className="w-full bg-[#0B1928] text-xs font-medium text-slate-300 border-b border-slate-800/60 min-h-[40px] flex items-center px-4 md:px-8">
@@ -11,7 +13,12 @@ export const AnnouncementBar = () => {
         </div>
 
         {/* Right Side */}
-        <div className="flex items-center gap-4 sm:gap-6 text-[11px] sm:text-xs text-slate-400">
+        <div className="flex items-center gap-3 sm:gap-5 text-[11px] sm:text-xs text-slate-400">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold text-slate-400 hidden md:inline">Follow Us:</span>
+            <OfficialSocialBadges />
+          </div>
+          <span className="text-slate-700 hidden sm:inline">|</span>
           <a href="#privacy" className="hover:text-[#F5A623] transition-colors duration-200">
             Privacy Policy
           </a>

@@ -9,6 +9,12 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
+  Package,
+  CheckCircle2,
+  EyeOff,
+  FileEdit,
+  FileSpreadsheet,
+  Layers,
 } from 'lucide-react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import AdminPageToolbar, { adminButtonClass } from '../../components/admin/AdminPageToolbar';
@@ -25,7 +31,7 @@ export const AdminProductsPage: React.FC = () => {
     deleteProduct,
     bulkDeleteProducts,
     toggleBestSeller,
-    toggleOutOfStock
+    toggleOutOfStock,
   } = useProducts();
 
   // Raw Filter Inputs
@@ -49,12 +55,29 @@ export const AdminProductsPage: React.FC = () => {
   const [singleDeleteProduct, setSingleDeleteProduct] = useState<Product | null>(null);
   const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
 
-  // Search Debounce Handler (~500ms)
+  // Product status metrics for KPI cards
+  const productStats = useMemo(() => {
+    const totalCount = products.length;
+    const activeCount = products.filter(
+      (p) => p.status === 'active' || (!p.status && p.status !== 'inactive' && p.status !== 'draft')
+    ).length;
+    const inactiveCount = products.filter((p) => p.status === 'inactive').length;
+    const draftCount = products.filter((p) => p.status === 'draft').length;
+
+    return {
+      total: totalCount,
+      active: activeCount,
+      inactive: inactiveCount,
+      draft: draftCount,
+    };
+  }, [products]);
+
+  // Search Debounce Handler (~400ms)
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchInput);
       setCurrentPage(1);
-    }, 500);
+    }, 400);
     return () => clearTimeout(handler);
   }, [searchInput]);
 
@@ -75,11 +98,22 @@ export const AdminProductsPage: React.FC = () => {
     return ['All Brands', ...Array.from(set)];
   }, [products]);
 
-  // Filtered Non-Draft Products Calculation
+  // Filtered Products Calculation
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      // DRAFT PRODUCTS MUST NOT APPEAR ON NORMAL PRODUCTS LIST PAGE
-      if (p.status === 'draft') return false;
+      const isDraft = p.status === 'draft';
+
+      // Status filtering
+      let matchesStatus = true;
+      if (selectedStatus === 'Active') {
+        matchesStatus = p.status === 'active' || (!p.status && p.status !== 'inactive' && !isDraft);
+      } else if (selectedStatus === 'Inactive') {
+        matchesStatus = p.status === 'inactive';
+      } else if (selectedStatus === 'Draft') {
+        matchesStatus = isDraft;
+      } else if (selectedStatus === 'All Status') {
+        matchesStatus = true;
+      }
 
       // Search matching (Name, Version, Company, Brand, Category, Short Description, Long Description, Tags)
       const q = debouncedSearch.toLowerCase().trim();
@@ -106,15 +140,10 @@ export const AdminProductsPage: React.FC = () => {
         p.software === selectedBrand ||
         p.company === selectedBrand;
 
-      // Status filter (Active / Inactive)
-      let matchesStatus = true;
-      if (selectedStatus === 'Active') matchesStatus = p.status === 'active' || !p.status;
-      else if (selectedStatus === 'Inactive') matchesStatus = p.status === 'inactive';
-
       // Best Seller Checkbox
       const matchesBestSeller = !isBestSellerOnly || Boolean(p.isBestSeller);
 
-      return matchesSearch && matchesCategory && matchesBrand && matchesStatus && matchesBestSeller;
+      return matchesStatus && matchesSearch && matchesCategory && matchesBrand && matchesBestSeller;
     });
   }, [products, debouncedSearch, selectedCategory, selectedBrand, selectedStatus, isBestSellerOnly]);
 
@@ -135,11 +164,13 @@ export const AdminProductsPage: React.FC = () => {
   };
 
   // Pagination calculation
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / itemsPerPage));
+  const validCurrentPage = Math.min(currentPage, totalPages);
+  const startIndex = filteredProducts.length > 0 ? (validCurrentPage - 1) * itemsPerPage : 0;
   const paginatedProducts = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredProducts.slice(start, start + itemsPerPage);
-  }, [filteredProducts, currentPage, itemsPerPage]);
+    return filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredProducts, startIndex, itemsPerPage]);
+  const displayEndIndex = Math.min(startIndex + itemsPerPage, filteredProducts.length);
 
   // Multi-Select Handlers
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -183,28 +214,40 @@ export const AdminProductsPage: React.FC = () => {
   };
 
   // Export to Excel
-  const handleExportExcel = () => {
-    const exportData = (
+  const handleExportExcel = (mode: 'filtered' | 'all' = 'filtered') => {
+    const listToExport =
       selectedProductIds.length > 0
         ? products.filter((p) => selectedProductIds.includes(p.id))
-        : filteredProducts
-    ).map((p) => ({
+        : mode === 'all'
+        ? products
+        : filteredProducts;
+
+    const exportData = listToExport.map((p) => ({
       ID: p.id,
       Name: p.name,
       Version: p.version || '',
+      Slug: p.slug || '',
       Brand: p.brand || p.software || '',
       Company: p.company || '',
       Category: p.category,
-      PriceINR: p.ebookPriceINR || p.price,
+      Status: p.status || 'active',
+      PriceINR: p.ebookPriceINR || p.price || 0,
       LifetimePriceINR: p.lifetimePriceINR || p.lifetimePrice || '',
       MembershipPriceINR: p.membershipPriceINR || p.membershipPrice || '',
-      Status: p.status || 'active',
       BestSeller: p.isBestSeller ? 'Yes' : 'No',
       OutOfStock: p.isOutOfStock ? 'Yes' : 'No',
-      CreatedAt: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : ''
+      HasDownloadLink: Boolean(p.driveLink) ? 'Yes' : 'No',
+      CreatedAt: p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '',
     }));
 
-    downloadExcel(exportData, 'Products', `products_${exportDateStamp()}`);
+    const fileSuffix =
+      selectedProductIds.length > 0
+        ? 'selected'
+        : mode === 'all'
+        ? 'all'
+        : selectedStatus.toLowerCase().replace(/\s+/g, '_');
+
+    downloadExcel(exportData, 'Products', `products_${fileSuffix}_${exportDateStamp()}`);
   };
 
   const handleExportJSON = () => {
@@ -219,15 +262,259 @@ export const AdminProductsPage: React.FC = () => {
   return (
     <AdminLayout title="Product Management">
       <div className="space-y-6">
+        {/* Product Menu & Quick Nav Navigation Bar */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mr-2 flex items-center gap-1.5 shrink-0">
+              <Layers className="w-4 h-4 text-[#F5A000]" />
+              <span>Catalogue Menu:</span>
+            </span>
 
+            {/* Quick Status Filters */}
+            <button
+              type="button"
+              onClick={() => handleFilterChange(setSelectedStatus, 'All Status')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                selectedStatus === 'All Status'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              All Products ({productStats.total})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleFilterChange(setSelectedStatus, 'Active')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                selectedStatus === 'Active'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+              }`}
+            >
+              Active ({productStats.active})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleFilterChange(setSelectedStatus, 'Inactive')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                selectedStatus === 'Inactive'
+                  ? 'bg-slate-600 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              Inactive ({productStats.inactive})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleFilterChange(setSelectedStatus, 'Draft')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                selectedStatus === 'Draft'
+                  ? 'bg-purple-600 text-white shadow-xs'
+                  : 'bg-purple-50 text-purple-800 hover:bg-purple-100'
+              }`}
+            >
+              Drafts ({productStats.draft})
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleExportExcel('all')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-xs font-bold text-emerald-800 hover:bg-emerald-100 transition-colors cursor-pointer"
+              title="Export complete product catalogue to Excel"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Export All ({productStats.total})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/admin/products/drafts')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-purple-200 bg-purple-50 text-xs font-bold text-purple-800 hover:bg-purple-100 transition-colors cursor-pointer"
+            >
+              <FileEdit className="w-3.5 h-3.5" />
+              <span>Draft Manager</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/admin/products/add')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#F5A000] hover:bg-amber-600 text-xs font-extrabold text-white shadow-sm transition-colors cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Product</span>
+            </button>
+          </div>
+        </div>
+
+        {/* KPI / Summary Cards Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Products Card */}
+          <button
+            type="button"
+            onClick={() => handleFilterChange(setSelectedStatus, 'All Status')}
+            className={`text-left bg-white p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
+              selectedStatus === 'All Status'
+                ? 'border-[#F5A000] ring-2 ring-[#F5A000]/30 shadow-md'
+                : 'border-slate-200/80 hover:border-slate-300 shadow-xs'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Total Products
+                </p>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
+                  {productStats.total}
+                </h3>
+                <p className="text-xs font-semibold text-slate-500 mt-1">
+                  Complete store catalogue
+                </p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <Package className="w-6 h-6" />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400 font-medium border-t border-slate-100 pt-2.5">
+              <span>All catalog items</span>
+              <span
+                className={`font-bold ${
+                  selectedStatus === 'All Status' ? 'text-[#F5A000]' : 'text-slate-500'
+                }`}
+              >
+                {selectedStatus === 'All Status' ? 'Active Filter' : 'Click to filter'}
+              </span>
+            </div>
+          </button>
+
+          {/* Active Products Card */}
+          <button
+            type="button"
+            onClick={() => handleFilterChange(setSelectedStatus, 'Active')}
+            className={`text-left bg-white p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
+              selectedStatus === 'Active'
+                ? 'border-emerald-500 ring-2 ring-emerald-500/30 shadow-md'
+                : 'border-slate-200/80 hover:border-emerald-300 shadow-xs'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">
+                  Active Products
+                </p>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
+                  {productStats.active}
+                </h3>
+                <p className="text-xs font-semibold text-emerald-600 mt-1">
+                  Published & live on store
+                </p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400 font-medium border-t border-slate-100 pt-2.5">
+              <span>Ready for checkout</span>
+              <span
+                className={`font-bold ${
+                  selectedStatus === 'Active' ? 'text-emerald-600' : 'text-slate-500'
+                }`}
+              >
+                {selectedStatus === 'Active' ? 'Active Filter' : 'Filter active'}
+              </span>
+            </div>
+          </button>
+
+          {/* Inactive Products Card */}
+          <button
+            type="button"
+            onClick={() => handleFilterChange(setSelectedStatus, 'Inactive')}
+            className={`text-left bg-white p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
+              selectedStatus === 'Inactive'
+                ? 'border-slate-600 ring-2 ring-slate-600/30 shadow-md'
+                : 'border-slate-200/80 hover:border-slate-400 shadow-xs'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                  Inactive Products
+                </p>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
+                  {productStats.inactive}
+                </h3>
+                <p className="text-xs font-semibold text-slate-500 mt-1">
+                  Hidden / Temporarily offline
+                </p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <EyeOff className="w-6 h-6" />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400 font-medium border-t border-slate-100 pt-2.5">
+              <span>Hidden from buyers</span>
+              <span
+                className={`font-bold ${
+                  selectedStatus === 'Inactive' ? 'text-slate-700' : 'text-slate-500'
+                }`}
+              >
+                {selectedStatus === 'Inactive' ? 'Active Filter' : 'Filter inactive'}
+              </span>
+            </div>
+          </button>
+
+          {/* Draft Products Card */}
+          <button
+            type="button"
+            onClick={() => handleFilterChange(setSelectedStatus, 'Draft')}
+            className={`text-left bg-white p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
+              selectedStatus === 'Draft'
+                ? 'border-purple-500 ring-2 ring-purple-500/30 shadow-md'
+                : 'border-slate-200/80 hover:border-purple-300 shadow-xs'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-purple-600">
+                  Draft Products
+                </p>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
+                  {productStats.draft}
+                </h3>
+                <p className="text-xs font-semibold text-purple-600 mt-1">
+                  Unpublished drafts
+                </p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <FileEdit className="w-6 h-6" />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400 font-medium border-t border-slate-100 pt-2.5">
+              <span>Pending publication</span>
+              <span
+                className={`font-bold ${
+                  selectedStatus === 'Draft' ? 'text-purple-600' : 'text-slate-500'
+                }`}
+              >
+                {selectedStatus === 'Draft' ? 'Active Filter' : 'Filter drafts'}
+              </span>
+            </div>
+          </button>
+        </div>
+
+        {/* Search, Filter Toolbar & Export Options */}
         <AdminPageToolbar
           title="Products"
-          description="Search, filter, and export the published catalogue."
+          description="Search, filter, and export catalogue items with real-time stock and status toggles."
           count={filteredProducts.length}
           countLabel="items"
           searchValue={searchInput}
           onSearchChange={setSearchInput}
-          searchPlaceholder="Search name, brand, or category"
+          searchPlaceholder="Search product name, brand, version, or category"
           filters={[
             {
               id: 'category',
@@ -252,25 +539,30 @@ export const AdminProductsPage: React.FC = () => {
                 { value: 'All Status', label: 'All status' },
                 { value: 'Active', label: 'Active' },
                 { value: 'Inactive', label: 'Inactive' },
+                { value: 'Draft', label: 'Draft' },
               ],
             },
           ]}
           extra={
-            <label className="flex items-center gap-2 text-xs font-bold text-slate-700">
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer">
               <input
                 type="checkbox"
                 checked={isBestSellerOnly}
                 onChange={(event) => handleFilterChange(setIsBestSellerOnly, event.target.checked)}
                 className="h-4 w-4 rounded border-slate-300 text-[#F5A000] focus:ring-[#F5A000]"
               />
-              Best sellers
+              Best sellers only
             </label>
           }
           onClear={handleClearFilters}
-          onExportExcel={handleExportExcel}
+          onExportExcel={() => handleExportExcel('filtered')}
           onExportJson={handleExportJSON}
           actions={
-            <button type="button" onClick={() => navigate('/admin/products/add')} className={adminButtonClass.primary}>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/products/add')}
+              className={adminButtonClass.primary}
+            >
               <Plus className="h-4 w-4" />
               Add product
             </button>
@@ -279,24 +571,32 @@ export const AdminProductsPage: React.FC = () => {
 
         {/* Selected Products Banner */}
         {selectedProductIds.length > 0 && (
-          <div className="bg-amber-500 text-white px-5 py-3 rounded-2xl shadow-md flex items-center justify-between animate-fade-in">
-            <div className="flex items-center gap-2 font-extrabold text-xs">
-              <CheckCircle className="w-4 h-4" />
+          <div className="bg-[#F5A000] text-slate-950 px-5 py-3 rounded-2xl shadow-md flex items-center justify-between animate-fade-in">
+            <div className="flex items-center gap-2 font-black text-xs">
+              <CheckCircle className="w-4 h-4 text-slate-950" />
               <span>{selectedProductIds.length} product(s) selected</span>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleExportExcel('filtered')}
+                className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Export Selected</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setIsBulkDeleteModalOpen(true)}
                 className="px-3.5 py-1.5 bg-rose-700 hover:bg-rose-800 text-white font-extrabold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>Bulk Delete Selected</span>
+                <span>Bulk Delete</span>
               </button>
               <button
                 type="button"
                 onClick={() => setSelectedProductIds([])}
-                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                className="px-3 py-1.5 bg-slate-800/20 hover:bg-slate-800/30 text-slate-950 font-bold text-xs rounded-xl transition-colors cursor-pointer"
               >
                 Deselect All
               </button>
@@ -319,6 +619,7 @@ export const AdminProductsPage: React.FC = () => {
                     />
                   </th>
                   <th className="py-3 px-4">Product</th>
+                  <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Brand</th>
                   <th className="py-3 px-4">Category</th>
                   <th className="py-3 px-4">Pricing</th>
@@ -334,6 +635,8 @@ export const AdminProductsPage: React.FC = () => {
                     const isSelected = selectedProductIds.includes(product.id);
                     const brandName = product.brand || product.software || 'CAD Software';
                     const companyName = product.company || brandName;
+                    const isDraft = product.status === 'draft';
+                    const isInactive = product.status === 'inactive';
 
                     return (
                       <tr
@@ -372,11 +675,13 @@ export const AdminProductsPage: React.FC = () => {
                               />
                             </div>
 
-                            <div className="overflow-hidden">
-                              <div className="font-bold text-slate-900 line-clamp-1 flex items-center gap-1.5">
-                                <span>{product.name}</span>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-extrabold text-slate-900 truncate">
+                                  {product.name}
+                                </span>
                                 {product.version && (
-                                  <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 font-mono text-[10px] rounded-md font-semibold">
+                                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-bold border border-slate-200">
                                     v{product.version}
                                   </span>
                                 )}
@@ -401,7 +706,27 @@ export const AdminProductsPage: React.FC = () => {
                           </div>
                         </td>
 
-                        {/* 3. Brand Column (Brand, Company when different) */}
+                        {/* 3. Status Badge Column */}
+                        <td className="py-3.5 px-4">
+                          {isDraft ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 text-purple-700 font-extrabold text-[10px] rounded-lg border border-purple-200">
+                              <FileEdit className="w-3 h-3" />
+                              <span>Draft</span>
+                            </span>
+                          ) : isInactive ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-600 font-extrabold text-[10px] rounded-lg border border-slate-200">
+                              <EyeOff className="w-3 h-3" />
+                              <span>Inactive</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 font-extrabold text-[10px] rounded-lg border border-emerald-200">
+                              <CheckCircle2 className="w-3 h-3" />
+                              <span>Active</span>
+                            </span>
+                          )}
+                        </td>
+
+                        {/* 4. Brand Column */}
                         <td className="py-3.5 px-4 font-semibold text-slate-800">
                           <div className="font-bold text-slate-900">{brandName}</div>
                           {companyName !== brandName && (
@@ -411,7 +736,7 @@ export const AdminProductsPage: React.FC = () => {
                           )}
                         </td>
 
-                        {/* 4. Category Column (Category badge, Product tags) */}
+                        {/* 5. Category Column */}
                         <td className="py-3.5 px-4">
                           <span className="px-2.5 py-1 bg-slate-100 text-slate-800 font-extrabold text-[10px] rounded-lg border border-slate-200/60 inline-block mb-1">
                             {product.category}
@@ -431,7 +756,7 @@ export const AdminProductsPage: React.FC = () => {
                           )}
                         </td>
 
-                        {/* 5. Pricing Column */}
+                        {/* 6. Pricing Column */}
                         <td className="py-3.5 px-4 font-semibold">
                           {product.subscriptionDurations && product.subscriptionDurations.length > 0 ? (
                             <div className="space-y-0.5">
@@ -464,7 +789,7 @@ export const AdminProductsPage: React.FC = () => {
                           )}
                         </td>
 
-                        {/* 6. Best Seller Inline Checkbox (Show Yes/No) */}
+                        {/* 7. Best Seller Inline Checkbox */}
                         <td className="py-3.5 px-4 text-center">
                           <label className="inline-flex items-center gap-1.5 cursor-pointer">
                             <input
@@ -484,7 +809,7 @@ export const AdminProductsPage: React.FC = () => {
                           </label>
                         </td>
 
-                        {/* 7. Out of Stock Inline Checkbox (Show Yes/No) */}
+                        {/* 8. Out of Stock Inline Checkbox */}
                         <td className="py-3.5 px-4 text-center">
                           <label className="inline-flex items-center gap-1.5 cursor-pointer">
                             <input
@@ -504,7 +829,7 @@ export const AdminProductsPage: React.FC = () => {
                           </label>
                         </td>
 
-                        {/* 8. Actions (View, Edit, Delete) with tooltips / accessible labels */}
+                        {/* 9. Actions */}
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             {/* View */}
@@ -525,8 +850,12 @@ export const AdminProductsPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => navigate(`/admin/products/${product.id}/edit`)}
-                              className="p-1.5 bg-amber-50 hover:bg-amber-100 text-[#F5A000] rounded-lg transition-colors cursor-pointer"
-                              title="Edit Product"
+                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                isDraft
+                                  ? 'bg-purple-50 hover:bg-purple-100 text-purple-700'
+                                  : 'bg-amber-50 hover:bg-amber-100 text-[#F5A000]'
+                              }`}
+                              title={isDraft ? 'Edit & Publish Draft' : 'Edit Product'}
                               aria-label={`Edit ${product.name}`}
                             >
                               <Edit className="w-3.5 h-3.5" />
@@ -549,8 +878,18 @@ export const AdminProductsPage: React.FC = () => {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
-                      {products.length === 0 ? 'No products available. Click "Add Product" above to add products to your store.' : 'No published products match your current search or filter criteria.'}
+                    <td colSpan={9} className="py-12 text-center text-slate-400 font-medium">
+                      {products.length === 0 ? (
+                        'No products available. Click "Add Product" above to add products to your store.'
+                      ) : (
+                        <div className="flex flex-col items-center justify-center">
+                          <Package className="w-10 h-10 text-slate-300 mb-2 stroke-[1.5]" />
+                          <p className="text-sm font-bold text-slate-600">No products found</p>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            No products match your current search or status filter.
+                          </p>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )}
@@ -562,11 +901,11 @@ export const AdminProductsPage: React.FC = () => {
           <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-semibold text-slate-600">
             <div className="flex items-center gap-3">
               <span>
-                Showing {filteredProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to{' '}
-                {Math.min(currentPage * itemsPerPage, filteredProducts.length)} of {filteredProducts.length} items
+                Showing {filteredProducts.length > 0 ? startIndex + 1 : 0} to{' '}
+                {displayEndIndex} of {filteredProducts.length} items
               </span>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
                 <span className="text-slate-400">Per page:</span>
                 <select
                   value={itemsPerPage}
@@ -574,11 +913,12 @@ export const AdminProductsPage: React.FC = () => {
                     setItemsPerPage(Number(e.target.value));
                     setCurrentPage(1);
                   }}
-                  className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800"
+                  className="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#F5A000]/30 cursor-pointer"
                 >
                   <option value={10}>10</option>
                   <option value={25}>25</option>
                   <option value={50}>50</option>
+                  <option value={100}>100</option>
                 </select>
               </div>
             </div>
@@ -587,23 +927,50 @@ export const AdminProductsPage: React.FC = () => {
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                disabled={currentPage === 1}
+                disabled={validCurrentPage <= 1}
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                className="p-1.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 disabled:opacity-40 cursor-pointer"
+                className="p-1.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 disabled:opacity-40 cursor-pointer transition-colors"
                 aria-label="Previous Page"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
 
-              <span className="px-3 py-1 font-bold text-slate-800">
-                Page {currentPage} of {totalPages}
-              </span>
+              {/* Page pills */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => {
+                    if (totalPages <= 5) return true;
+                    if (p === 1 || p === totalPages) return true;
+                    return Math.abs(p - validCurrentPage) <= 1;
+                  })
+                  .map((pageNum, idx, arr) => {
+                    const prev = arr[idx - 1];
+                    const showEllipsis = prev && pageNum - prev > 1;
+
+                    return (
+                      <React.Fragment key={pageNum}>
+                        {showEllipsis && <span className="px-1 text-slate-400 font-bold">...</span>}
+                        <button
+                          type="button"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`min-w-8 h-8 px-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                            validCurrentPage === pageNum
+                              ? 'bg-[#F5A000] text-white shadow-xs'
+                              : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      </React.Fragment>
+                    );
+                  })}
+              </div>
 
               <button
                 type="button"
-                disabled={currentPage >= totalPages}
+                disabled={validCurrentPage >= totalPages}
                 onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                className="p-1.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 disabled:opacity-40 cursor-pointer"
+                className="p-1.5 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 disabled:opacity-40 cursor-pointer transition-colors"
                 aria-label="Next Page"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -640,7 +1007,6 @@ export const AdminProductsPage: React.FC = () => {
           onConfirm={handleBulkDeleteConfirm}
           onCancel={() => setIsBulkDeleteModalOpen(false)}
         />
-
       </div>
     </AdminLayout>
   );

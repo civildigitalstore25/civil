@@ -16,6 +16,7 @@ import {
 } from '../../utils/productDisplay';
 import { useNow } from '../../hooks/useNow';
 import OfferCountdown from './OfferCountdown';
+import WhatsAppIcon from '../common/WhatsAppIcon';
 
 interface ProductInfoSectionProps {
   product: Product;
@@ -187,9 +188,10 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({ product 
               href={`https://wa.me/918807423228?text=${encodeURIComponent(`Hi, I am interested in ${product.name}`)}`}
               target="_blank"
               rel="noreferrer"
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#22C55E] py-2.5 text-sm font-bold text-white"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] py-3 text-sm font-extrabold text-white shadow-sm shadow-[#25D366]/25 transition-all cursor-pointer"
             >
-              Order on WhatsApp
+              <WhatsAppIcon className="w-5 h-5 fill-white shrink-0" />
+              <span>Order on WhatsApp</span>
             </a>
             {freeOn ? (
               <button type="button" onClick={() => { purchase(); navigate('/checkout'); }} className="w-full rounded-lg bg-emerald-600 py-3 text-sm font-bold text-white hover:bg-emerald-700">

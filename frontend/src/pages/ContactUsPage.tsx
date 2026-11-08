@@ -5,8 +5,10 @@ import Header from '../components/layout/Header';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
 import WhatsAppButton from '../components/common/WhatsAppButton';
+import WhatsAppIcon from '../components/common/WhatsAppIcon';
 import { storageService } from '../services/storageService';
 import { apiRequest } from '../services/apiClient';
+import { SOCIAL_LINKS, InstagramGlyph } from '../components/common/SocialLinks';
 
 export const ContactUsPage: React.FC = () => {
   const [name, setName] = useState('');
@@ -92,8 +94,8 @@ export const ContactUsPage: React.FC = () => {
       {/* Main Content Area */}
       <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10 space-y-10">
         
-        {/* 3 Contact Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* 4 Contact Info Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Card 1: Call to Us */}
           <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow space-y-4">
             <div className="w-12 h-12 rounded-xl bg-amber-50 text-[#F5A623] flex items-center justify-center text-xl shrink-0">
@@ -147,8 +149,110 @@ export const ContactUsPage: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span>Sunday:</span>
-                <span className="font-bold text-emerald-600">Online Support 24/7</span>
+                <span className="font-bold text-emerald-600">Online 24/7</span>
               </div>
+            </div>
+          </div>
+
+          {/* Card 4: Official Social Channels */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow space-y-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white flex items-center justify-center text-xl shrink-0 shadow-xs">
+              <InstagramGlyph className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900">Official Social Media</h3>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                Follow our official accounts for daily updates & releases.
+              </p>
+            </div>
+            <div className="space-y-2.5 pt-2 border-t border-slate-100">
+              {/* Instagram */}
+              <a
+                href={SOCIAL_LINKS.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2.5 p-1.5 -mx-1.5 rounded-xl hover:bg-slate-50 transition-colors group"
+                title="Follow us on Instagram (@civildigital_store)"
+              >
+                <span className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                  <InstagramGlyph className="w-4 h-4" />
+                </span>
+                <div className="min-w-0">
+                  <span className="block text-xs font-extrabold text-slate-900 group-hover:text-pink-600 transition-colors truncate">
+                    Instagram
+                  </span>
+                  <span className="block text-[10px] text-slate-400 font-medium truncate">
+                    @civildigital_store
+                  </span>
+                </div>
+              </a>
+
+              {/* YouTube */}
+              <a
+                href={SOCIAL_LINKS.youtube}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2.5 p-1.5 -mx-1.5 rounded-xl hover:bg-slate-50 transition-colors group"
+                title="Subscribe on YouTube (@CivilDigitalStore)"
+              >
+                <span className="w-7 h-7 rounded-lg bg-[#FF0000] text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                  </svg>
+                </span>
+                <div className="min-w-0">
+                  <span className="block text-xs font-extrabold text-slate-900 group-hover:text-red-600 transition-colors truncate">
+                    YouTube
+                  </span>
+                  <span className="block text-[10px] text-slate-400 font-medium truncate">
+                    @CivilDigitalStore
+                  </span>
+                </div>
+              </a>
+
+              {/* Facebook */}
+              <a
+                href={SOCIAL_LINKS.facebook}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2.5 p-1.5 -mx-1.5 rounded-xl hover:bg-slate-50 transition-colors group"
+                title="Follow us on Facebook (ercivildigitalstore)"
+              >
+                <span className="w-7 h-7 rounded-full bg-[#1877F2] text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                  </svg>
+                </span>
+                <div className="min-w-0">
+                  <span className="block text-xs font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                    Facebook
+                  </span>
+                  <span className="block text-[10px] text-slate-400 font-medium truncate">
+                    ercivildigitalstore
+                  </span>
+                </div>
+              </a>
+
+              {/* WhatsApp */}
+              <a
+                href={SOCIAL_LINKS.whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2.5 p-1.5 -mx-1.5 rounded-xl hover:bg-slate-50 transition-colors group"
+                title="Chat with us on WhatsApp (+91 88074 23228)"
+              >
+                <span className="w-7 h-7 rounded-full bg-[#25D366] text-white flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                  <WhatsAppIcon className="w-4 h-4 fill-current" />
+                </span>
+                <div className="min-w-0">
+                  <span className="block text-xs font-extrabold text-slate-900 group-hover:text-[#25D366] transition-colors truncate">
+                    WhatsApp
+                  </span>
+                  <span className="block text-[10px] text-slate-400 font-medium truncate">
+                    +91 88074 23228
+                  </span>
+                </div>
+              </a>
             </div>
           </div>
         </div>
