@@ -12,29 +12,29 @@ export const HomeReviewsSection: React.FC = () => {
   if (reviews.length === 0) return null;
 
   return (
-    <section className="w-full bg-white text-slate-900 py-16 md:py-24 border-t border-slate-200">
-      <div className="w-[90%] max-w-[1540px] mx-auto space-y-12">
+    <section className="w-full bg-white text-slate-900 py-10 sm:py-16 md:py-24 border-t border-slate-200">
+      <div className="w-[94%] sm:w-[90%] max-w-[1540px] mx-auto space-y-7 sm:space-y-12">
         
         {/* Section Header */}
-        <div className="text-center space-y-3">
-          <div className="flex items-center justify-center gap-2 text-[#D97706] text-xs font-extrabold uppercase tracking-wider">
+        <div className="text-center space-y-2 sm:space-y-3">
+          <div className="flex items-center justify-center gap-2 text-[#D97706] text-[10px] sm:text-xs font-extrabold uppercase tracking-wider">
             <span>💬</span>
             <span>VERIFIED FEEDBACK</span>
           </div>
-          <h2 className="text-3xl md:text-4xl lg:text-[40px] font-extrabold text-slate-900 tracking-tight">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-[40px] font-extrabold text-slate-900 tracking-tight">
             What Our Customers Say
           </h2>
-          <p className="text-sm text-slate-500 max-w-xl mx-auto font-medium">
+          <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto font-medium">
             Real feedback from civil engineers, structural designers & contractors using Civil Digital Store downloads.
           </p>
         </div>
 
         {/* Reviews Responsive Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
           {reviews.map((rev) => (
             <div
               key={rev.id}
-              className="bg-slate-50 border border-slate-200 hover:border-[#F5A623] p-6 rounded-2xl shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 hover:-translate-y-1"
+              className="bg-slate-50 border border-slate-200 hover:border-[#F5A623] p-4 sm:p-6 rounded-2xl shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between space-y-4 hover:-translate-y-1"
             >
               <div className="space-y-3">
                 {/* Header: Avatar, Name & Rating */}

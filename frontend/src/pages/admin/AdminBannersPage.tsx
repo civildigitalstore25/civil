@@ -5,8 +5,16 @@ import { DualBannerRow } from '../../components/home/HomeBanners';
 import { bannerApi, type BannerRecord, type BannerSlot } from '../../services/bannerApi';
 
 const slots: { id: BannerSlot; title: string; hint: string }[] = [
-  { id: 'left', title: 'Left (wide)', hint: '1200 × 600 px (2:1). This is the large carousel.' },
-  { id: 'right', title: 'Right (short)', hint: '480 × 600 px (4:5). This sits beside the large carousel.' },
+  {
+    id: 'left',
+    title: 'Left (wide)',
+    hint: 'Best size: 1200 × 600 px (2:1). Retina: 1600 × 800 px. Keep important text in the lower-left safe area.',
+  },
+  {
+    id: 'right',
+    title: 'Right (tall)',
+    hint: 'Best size: 400 × 600 px (2:3). Retina: 540 × 800 px. Matches the left banner height on desktop.',
+  },
 ];
 
 const fieldClass = 'h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm';
@@ -183,7 +191,7 @@ export const AdminBannersPage: React.FC = () => {
         <div>
           <h2 className="text-lg font-extrabold text-slate-900">Homepage carousel</h2>
           <p className="mt-1 text-sm text-slate-500">
-            The homepage shows a wide carousel on the left and a shorter card on the right. Add a headline, short line, and button for each slide.
+            Desktop shows a wide left carousel (2:1) beside a tall right card (2:3). Create images at <strong>1200×600</strong> for left and <strong>400×600</strong> for right. On mobile both stack full width.
           </p>
           {error && <p className="mt-2 text-sm font-semibold text-rose-600">{error}</p>}
         </div>

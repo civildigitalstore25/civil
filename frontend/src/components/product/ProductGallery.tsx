@@ -31,7 +31,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, title, v
 
   return (
     <div className="space-y-3">
-      <div className="flex aspect-square items-center justify-center rounded-xl bg-white p-3">
+      <div className="flex aspect-[4/3] sm:aspect-square items-center justify-center rounded-xl border border-slate-200 bg-white p-2 sm:p-3">
         {player ? (
           <div className="aspect-video w-full max-w-md overflow-hidden rounded-lg bg-black shadow">
             {player.kind === 'iframe' ? (
@@ -57,7 +57,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, title, v
             <img
               src={current.src}
               alt={title}
-              className="max-h-full max-w-full rounded-lg object-contain shadow transition-transform duration-200"
+              className="max-h-full max-w-full rounded-lg object-contain transition-transform duration-200"
               style={{ transform: zoom.on ? 'scale(2)' : 'scale(1)', transformOrigin: `${zoom.x}% ${zoom.y}%` }}
             />
           </div>

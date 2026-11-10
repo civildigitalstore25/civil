@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Headphones, ShieldCheck, Zap } from 'lucide-react';
 import type { Product } from '../../types/product';
@@ -179,39 +180,88 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({ product 
             <div className="flex items-center gap-3">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Quantity</span>
               <div className="flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5">
-                <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))} className="h-7 w-7 rounded-md border border-slate-200 bg-white text-sm font-semibold">-</button>
+                <button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))} className="h-7 w-7 cursor-pointer rounded-md border border-slate-200 bg-white text-sm font-semibold">-</button>
                 <span className="w-8 text-center text-xs font-bold">{quantity}</span>
-                <button type="button" onClick={() => setQuantity((value) => value + 1)} className="h-7 w-7 rounded-md border border-slate-200 bg-white text-sm font-semibold">+</button>
+                <button type="button" onClick={() => setQuantity((value) => value + 1)} className="h-7 w-7 cursor-pointer rounded-md border border-slate-200 bg-white text-sm font-semibold">+</button>
               </div>
             </div>
-            <a
-              href={`https://wa.me/918807423228?text=${encodeURIComponent(`Hi, I am interested in ${product.name}`)}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] py-3 text-sm font-extrabold text-white shadow-sm shadow-[#25D366]/25 transition-all cursor-pointer"
-            >
-              <WhatsAppIcon className="w-5 h-5 fill-white shrink-0" />
-              <span>Order on WhatsApp</span>
-            </a>
-            {freeOn ? (
-              <button type="button" onClick={() => { purchase(); navigate('/checkout'); }} className="w-full rounded-lg bg-emerald-600 py-3 text-sm font-bold text-white hover:bg-emerald-700">
-                Get it Free
-              </button>
-            ) : (
-              <>
-                <button type="button" onClick={handleAddToCart} className={`w-full rounded-lg py-3 text-sm font-bold text-white ${addedToCart ? 'bg-emerald-600' : 'bg-gradient-to-r from-[#F5A623] to-[#FFAA00]'}`}>
-                  {addedToCart ? 'Added to cart' : 'Add to cart'}
+
+            {/* Desktop / tablet actions */}
+            <div className="hidden sm:flex sm:flex-col sm:gap-2">
+              <a
+                href={`https://wa.me/918807423228?text=${encodeURIComponent(`Hi, I am interested in ${product.name}`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] py-3 text-sm font-extrabold text-white shadow-sm shadow-[#25D366]/25 transition-all"
+              >
+                <WhatsAppIcon className="w-5 h-5 fill-white shrink-0" />
+                <span>Order on WhatsApp</span>
+              </a>
+              {freeOn ? (
+                <button type="button" onClick={() => { purchase(); navigate('/checkout'); }} className="w-full cursor-pointer rounded-lg bg-emerald-600 py-3 text-sm font-bold text-white hover:bg-emerald-700">
+                  Get it Free
                 </button>
-                <button type="button" onClick={() => { purchase(); navigate('/checkout'); }} className="w-full rounded-lg border border-slate-300 bg-white py-2.5 text-sm font-bold text-slate-900">
-                  Buy it now
-                </button>
-              </>
-            )}
+              ) : (
+                <div className="flex gap-2">
+                  <button type="button" onClick={handleAddToCart} className={`flex-1 cursor-pointer rounded-xl border-2 border-[#F5A623] bg-white py-3 text-sm font-bold text-[#B45309] ${addedToCart ? 'border-emerald-600 text-emerald-700' : ''}`}>
+                    {addedToCart ? 'Added to cart' : 'Add to cart'}
+                  </button>
+                  <button type="button" onClick={() => { purchase(); navigate('/checkout'); }} className="flex-1 cursor-pointer rounded-xl bg-gradient-to-r from-[#F5A623] to-[#FFAA00] py-3 text-sm font-bold text-white">
+                    Buy now →
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Mobile sticky action bar — portaled to body so it sits flush on the viewport */}
+            {typeof document !== 'undefined' &&
+              createPortal(
+                <div
+                  className="sm:hidden border-t border-slate-200 bg-white px-3 pt-2 shadow-[0_-6px_20px_rgba(15,23,42,0.1)]"
+                  style={{
+                    position: 'fixed',
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 40,
+                    margin: 0,
+                    paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom, 0px))',
+                  }}
+                >
+                  {freeOn ? (
+                    <button type="button" onClick={() => { purchase(); navigate('/checkout'); }} className="w-full cursor-pointer rounded-xl bg-emerald-600 py-3 text-sm font-extrabold text-white">
+                      Get it Free
+                    </button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleAddToCart}
+                        className={`flex-1 cursor-pointer rounded-xl border-2 py-3 text-sm font-extrabold ${
+                          addedToCart
+                            ? 'border-emerald-600 bg-emerald-50 text-emerald-700'
+                            : 'border-[#F5A623] bg-white text-[#B45309]'
+                        }`}
+                      >
+                        {addedToCart ? 'Added' : 'Add to Cart'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { purchase(); navigate('/checkout'); }}
+                        className="flex-1 cursor-pointer rounded-xl bg-gradient-to-r from-[#F5A623] to-[#FFAA00] py-3 text-sm font-extrabold text-white"
+                      >
+                        Buy Now →
+                      </button>
+                    </div>
+                  )}
+                </div>,
+                document.body,
+              )}
           </>
         )
       )}
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 pb-20 sm:pb-0">
         {[
           { title: 'Secure checkout', text: 'Safe payment', icon: ShieldCheck },
           { title: 'Instant delivery', text: 'Digital download', icon: Zap },

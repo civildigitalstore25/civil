@@ -128,11 +128,11 @@ export const SoftwareCollection: React.FC = () => {
   };
 
   return (
-    <section id="softwares" className="w-full bg-white text-slate-900 py-10 md:py-16 border-b border-slate-200">
-      <div className="w-[92%] max-w-[1540px] mx-auto">
-        <div className="text-center pb-6 md:pb-10">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-950">Shop by Brand</h2>
-          <p className="mt-2 text-sm text-slate-500">Pick a brand, then open one of its categories.</p>
+    <section id="softwares" className="w-full bg-white text-slate-900 py-8 sm:py-10 md:py-16 border-b border-slate-200">
+      <div className="w-[94%] sm:w-[92%] max-w-[1540px] mx-auto">
+        <div className="text-center pb-5 sm:pb-6 md:pb-10">
+          <h2 className="text-xl sm:text-3xl md:text-4xl font-bold text-slate-950">Shop by Brand</h2>
+          <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-slate-500">Pick a brand, then open one of its categories.</p>
         </div>
 
         {loading && <div className="h-24 rounded-2xl bg-slate-100 animate-pulse" />}

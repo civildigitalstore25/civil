@@ -68,9 +68,9 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ product:
       />
 
       {/* Main Content Area */}
-      <main className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8 space-y-8">
+      <main className="flex-grow max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8 space-y-6 sm:space-y-8 pb-24 sm:pb-8">
         {/* Product Top Grid: Gallery (Left) | Product Info (Right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 items-start">
           {/* Left: Product Image Gallery (6 cols lg) */}
           <div className="lg:col-span-6 w-full">
             <ProductGallery images={product.images} title={product.name} videoUrl={product.videoUrl} />
@@ -93,8 +93,8 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ product:
       {/* Reusable Footer */}
       <Footer />
 
-      {/* Floating WhatsApp Button */}
-      <WhatsAppButton />
+      {/* Floating WhatsApp — icon-only on mobile above sticky buttons, full chip on desktop */}
+      <WhatsAppButton compactOnMobile />
     </div>
   );
 };

@@ -48,25 +48,25 @@ export const FeaturedProductCard: React.FC = () => {
   const categoryLabel = featuredProduct.software || featuredProduct.category || 'Featured';
 
   return (
-    <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-slate-700/60 hover:border-[#F5A623]/50 rounded-2xl p-4 shadow-2xl shadow-slate-950/60 transition-all duration-300 transform hover:-translate-y-1">
+    <div className="w-full max-w-md bg-slate-900/80 backdrop-blur-xl border border-slate-700/60 hover:border-[#F5A623]/50 rounded-2xl p-3 sm:p-4 shadow-2xl shadow-slate-950/60 transition-all duration-300 transform hover:-translate-y-1">
       {/* Image Container */}
       <Link
         to={`/${featuredProduct.slug}/`}
-        className="block relative w-full aspect-video rounded-xl overflow-hidden mb-4 border border-slate-800 bg-slate-950"
+        className="block relative w-full aspect-video rounded-xl overflow-hidden mb-3 sm:mb-4 border border-slate-800 bg-slate-950"
       >
         {image ? (
-          <img
-            src={image}
-            alt={featuredProduct.name}
-            className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
-          />
+          <div className="flex h-full w-full items-center justify-center p-3">
+            <img
+              src={image}
+              alt={featuredProduct.name}
+              className="max-h-full max-w-full object-contain transform hover:scale-105 transition-transform duration-500"
+            />
+          </div>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-slate-500 bg-slate-800 text-xs">
             {featuredProduct.name}
           </div>
         )}
-        {/* Overlay gradient for depth */}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
 
         {/* Bestseller Badge */}
         {featuredProduct.isBestSeller && (

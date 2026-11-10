@@ -26,19 +26,19 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
   };
 
   return (
-    <nav className="w-full bg-slate-100 border-b border-slate-200 py-3 px-4 md:px-8 text-sm text-slate-500">
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 font-medium">
+    <nav className="w-full bg-slate-100 border-b border-slate-200 py-2.5 sm:py-3 px-3 sm:px-4 md:px-8 text-xs sm:text-sm text-slate-500">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 font-medium">
         {/* Left: Breadcrumb Trail */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2 flex-wrap">
           <Link to="/" className="hover:text-[#F5A623] transition-colors">
             Home
           </Link>
           <span>&gt;</span>
-          <Link to={categoryPath} className="hover:text-[#F5A623] transition-colors">
+          <Link to={categoryPath} className="hover:text-[#F5A623] transition-colors truncate max-w-[40vw] sm:max-w-none">
             {category || 'Softwares'}
           </Link>
-          <span>&gt;</span>
-          <span className="text-slate-900 truncate max-w-[200px] sm:max-w-md font-bold">
+          <span className="hidden sm:inline">&gt;</span>
+          <span className="hidden sm:inline text-slate-900 truncate max-w-md font-bold">
             {title}
           </span>
         </div>

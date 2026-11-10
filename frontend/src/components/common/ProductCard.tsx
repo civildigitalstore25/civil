@@ -66,19 +66,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     <div className="group w-full bg-white border border-slate-200 hover:border-[#F5A623]/80 rounded-2xl p-4 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between transform hover:-translate-y-1">
       <div>
         {/* Image Container with Badge */}
-        <Link to={`/${product.slug}/`} className="block relative w-full aspect-[16/10] rounded-xl overflow-hidden mb-4 border border-slate-100 bg-slate-50">
+        <Link to={`/${product.slug}/`} className="block relative w-full aspect-[4/3] rounded-xl overflow-hidden mb-4 border border-slate-100 bg-gradient-to-b from-slate-50 to-white">
           {product.images[0] ? (
-          <img
-            src={product.images[0]}
-            alt={product.name}
-            className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
-            loading="lazy"
-          />
+          <div className="flex h-full w-full items-center justify-center p-3 sm:p-4">
+            <img
+              src={product.images[0]}
+              alt={product.name}
+              className="max-h-full max-w-full object-contain transform group-hover:scale-105 transition-transform duration-500"
+              loading="lazy"
+            />
+          </div>
           ) : (
             <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-400">No image</div>
           )}
-          {/* Overlay gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent pointer-events-none" />
 
           {/* Badges Container */}
           <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1 z-10 max-w-[80%]">

@@ -88,34 +88,35 @@ export const HomeProductShowcase: React.FC = () => {
   }, [activeTab, currentTabObj]);
 
   return (
-    <section id="explore" className="w-full bg-white text-slate-900 py-12 md:py-20 border-b border-slate-200">
-      <div className="w-[90%] max-w-[1540px] mx-auto space-y-8">
+    <section id="explore" className="w-full bg-white text-slate-900 py-8 sm:py-12 md:py-20 border-b border-slate-200">
+      <div className="w-[94%] sm:w-[90%] max-w-[1540px] mx-auto space-y-5 sm:space-y-8">
         
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-4 pb-1">
-          <div>
-            <span className="text-xs font-extrabold text-[#D97706] uppercase tracking-wider block mb-1">
+        <div className="flex items-end justify-between gap-3 pb-1">
+          <div className="min-w-0">
+            <span className="text-[10px] sm:text-xs font-extrabold text-[#D97706] uppercase tracking-wider block mb-1">
               DIGITAL STORE CATALOGUE
             </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight truncate">
               {currentTabObj?.label ?? 'All Products'}
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+            <p className="text-[11px] sm:text-sm text-slate-500 font-medium mt-1">
               Showing {displayedProducts.length} top products in this section
             </p>
           </div>
 
           <Link
             to={viewAllUrl}
-            className="group bg-slate-100 hover:bg-[#F5A623] hover:text-white text-slate-800 text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl border border-slate-200 hover:border-[#F5A623] transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+            className="group bg-slate-100 hover:bg-[#F5A623] hover:text-white text-slate-800 text-xs sm:text-sm font-bold px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-200 hover:border-[#F5A623] transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
           >
-            <span>View All {currentTabObj?.label ?? 'Products'}</span>
+            <span className="hidden xs:inline sm:inline">View All</span>
+            <span className="sm:hidden">All</span>
             <span className="group-hover:translate-x-1 transition-transform">→</span>
           </Link>
         </div>
 
         {/* Top Interactive Filter Tabs Bar */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 scroll-smooth">
+        <div className="-mx-1 flex items-center gap-2 overflow-x-auto no-scrollbar px-1 pb-1 scroll-smooth">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -123,7 +124,7 @@ export const HomeProductShowcase: React.FC = () => {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap flex items-center gap-2 shrink-0 ${
+                className={`px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 sm:gap-2 shrink-0 ${
                   isActive
                     ? 'bg-[#0D1B2A] text-white shadow-md shadow-slate-900/10 border border-slate-900'
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
@@ -131,7 +132,7 @@ export const HomeProductShowcase: React.FC = () => {
               >
                 <span>{tab.label}</span>
                 <span
-                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                  className={`text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full font-bold ${
                     isActive ? 'bg-[#F5A623] text-slate-950' : 'bg-slate-200 text-slate-600'
                   }`}
                 >
@@ -144,7 +145,7 @@ export const HomeProductShowcase: React.FC = () => {
 
         {/* Dynamic Product Grid */}
         {displayedProducts.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pt-2">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 pt-1 sm:pt-2">
             {displayedProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}

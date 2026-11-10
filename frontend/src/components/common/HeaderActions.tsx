@@ -3,8 +3,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import SupportCard from './SupportCard';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../hooks/useAuth';
+import { MobileNavToggle } from '../layout/MobileNavMenu';
 
-export const HeaderActions: React.FC = () => {
+interface HeaderActionsProps {
+  mobileNavOpen?: boolean;
+  onMobileNavToggle?: () => void;
+}
+
+export const HeaderActions: React.FC<HeaderActionsProps> = ({
+  mobileNavOpen = false,
+  onMobileNavToggle,
+}) => {
   const { summary } = useCart();
   const { currentUser, isAuthenticated, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
@@ -29,9 +38,9 @@ export const HeaderActions: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center gap-4 lg:gap-6 shrink-0">
+    <div className="flex items-center gap-2 sm:gap-4 lg:gap-6 shrink-0">
       {/* Action Items */}
-      <div className="flex items-center gap-4 text-slate-700">
+      <div className="flex items-center gap-2 sm:gap-4 text-slate-700">
         
         {/* Account / Profile Dropdown Menu */}
         <div className="relative" ref={menuRef}>
@@ -159,10 +168,17 @@ export const HeaderActions: React.FC = () => {
           </div>
           <span className="hidden xl:inline text-xs font-semibold">Cart</span>
         </Link>
+
+        {/* Mobile hamburger — right of cart */}
+        {onMobileNavToggle && (
+          <MobileNavToggle open={mobileNavOpen} onToggle={onMobileNavToggle} />
+        )}
       </div>
 
-      {/* Support Card */}
-      <SupportCard />
+      {/* Support Card — desktop only so the mobile header stays uncrowded */}
+      <div className="hidden lg:block">
+        <SupportCard />
+      </div>
     </div>
   );
 };
