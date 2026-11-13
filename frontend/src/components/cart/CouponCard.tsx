@@ -12,16 +12,22 @@ export const CouponCard: React.FC<CouponCardProps> = ({
   onApplyCoupon,
   onRemoveCoupon
 }) => {
-  const [couponCode, setCouponCode] = useState('CIVIL10');
+  const [couponCode, setCouponCode] = useState('');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(
     null
   );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const result = onApplyCoupon(couponCode);
+    const cleanCode = couponCode.trim();
+    if (!cleanCode) {
+      setFeedback({ type: 'error', message: 'Please enter a coupon code.' });
+      return;
+    }
+    const result = onApplyCoupon(cleanCode);
     if (result.success) {
       setFeedback({ type: 'success', message: result.message });
+      setCouponCode('');
     } else {
       setFeedback({ type: 'error', message: result.message });
     }
@@ -36,9 +42,6 @@ export const CouponCard: React.FC<CouponCardProps> = ({
           </svg>
           Apply Coupon
         </h3>
-        <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-          Code: CIVIL10 available
-        </span>
       </div>
 
       {appliedCoupon ? (
@@ -54,6 +57,7 @@ export const CouponCard: React.FC<CouponCardProps> = ({
             onClick={() => {
               onRemoveCoupon();
               setFeedback(null);
+              setCouponCode('');
             }}
             className="text-xs font-bold text-red-600 hover:text-red-700 underline cursor-pointer ml-2"
           >
@@ -67,7 +71,7 @@ export const CouponCard: React.FC<CouponCardProps> = ({
               type="text"
               value={couponCode}
               onChange={(e) => {
-                setCouponCode(e.target.value);
+                setCouponCode(e.target.value.toUpperCase());
                 setFeedback(null);
               }}
               placeholder="Enter coupon code"
@@ -75,7 +79,8 @@ export const CouponCard: React.FC<CouponCardProps> = ({
             />
             <button
               type="submit"
-              className="bg-[#F5A623] hover:bg-[#e0951a] text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition-colors shadow-sm cursor-pointer shrink-0"
+              disabled={!couponCode.trim()}
+              className="bg-[#F5A623] hover:bg-[#e0951a] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition-colors shadow-sm cursor-pointer shrink-0"
             >
               Apply
             </button>
