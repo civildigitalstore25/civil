@@ -1,8 +1,15 @@
 import type { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Coupon from '../models/Coupon.js';
+
+// Legacy hardcoded coupon codes that must not exist by default
+const DEFAULT_HARDCODED_CODES = ['SAVE2024', 'WELCOME10', 'SAVE200', 'CIVIL10'];
 
 export const getCoupons = async (_req: Request, res: Response): Promise<void> => {
   try {
+    // Purge legacy hardcoded default coupons if any exist in the DB
+    await Coupon.deleteMany({ code: { $in: DEFAULT_HARDCODED_CODES } });
+
     const coupons = await Coupon.find().sort({ createdAt: -1 });
     
     // Auto-update status for expired or limit-reached coupons if active
@@ -27,7 +34,13 @@ export const getCoupons = async (_req: Request, res: Response): Promise<void> =>
 
 export const getCouponById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const coupon = await Coupon.findById(req.params.id);
+    const id = String(req.params.id || '');
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(404).json({ message: 'Coupon not found' });
+      return;
+    }
+
+    const coupon = await Coupon.findById(id);
     if (!coupon) {
       res.status(404).json({ message: 'Coupon not found' });
       return;
@@ -207,7 +220,13 @@ export const updateCoupon = async (req: Request, res: Response): Promise<void> =
 
 export const deleteCoupon = async (req: Request, res: Response): Promise<void> => {
   try {
-    const coupon = await Coupon.findByIdAndDelete(req.params.id);
+    const id = String(req.params.id || '');
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(404).json({ message: 'Coupon not found' });
+      return;
+    }
+
+    const coupon = await Coupon.findByIdAndDelete(id);
     if (!coupon) {
       res.status(404).json({ message: 'Coupon not found' });
       return;
@@ -220,7 +239,13 @@ export const deleteCoupon = async (req: Request, res: Response): Promise<void> =
 
 export const toggleCouponStatus = async (req: Request, res: Response): Promise<void> => {
   try {
-    const coupon = await Coupon.findById(req.params.id);
+    const id = String(req.params.id || '');
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(404).json({ message: 'Coupon not found' });
+      return;
+    }
+
+    const coupon = await Coupon.findById(id);
     if (!coupon) {
       res.status(404).json({ message: 'Coupon not found' });
       return;
@@ -236,7 +261,7 @@ export const toggleCouponStatus = async (req: Request, res: Response): Promise<v
 
 export const validateCoupon = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { code, productIds, subtotal } = req.body;
+    const { code, productIds, subtotal, items, cartItems } = req.body;
     if (!code) {
       res.status(400).json({ valid: false, message: 'Coupon code is required' });
       return;
@@ -271,10 +296,21 @@ export const validateCoupon = async (req: Request, res: Response): Promise<void>
       return;
     }
 
+    const cartTotal = Number(subtotal) || 0;
+    const rawItems: any[] = Array.isArray(items) ? items : Array.isArray(cartItems) ? cartItems : [];
+    let eligibleSubtotal = cartTotal;
+
     // Check product targeting if applicable
     if (coupon.applicableProducts && coupon.applicableProducts.length > 0) {
-      const itemsArr = Array.isArray(productIds) ? productIds : [];
-      const isEligible = itemsArr.some((id: string) => coupon.applicableProducts.includes(id));
+      const itemsArr: string[] = Array.isArray(productIds) && productIds.length > 0
+        ? productIds.map((id) => String(id || ''))
+        : rawItems.map((it) => String(it.productId || it.id || ''));
+
+      const isEligible = itemsArr.some((id: string) => {
+        const baseId = id.split('::')[0] || '';
+        return coupon.applicableProducts.includes(id) || (baseId ? coupon.applicableProducts.includes(baseId) : false);
+      });
+
       if (!isEligible) {
         res.status(400).json({
           valid: false,
@@ -282,21 +318,31 @@ export const validateCoupon = async (req: Request, res: Response): Promise<void>
         });
         return;
       }
+
+      if (rawItems.length > 0) {
+        const eligibleItems = rawItems.filter((it: any) => {
+          const pid = String(it.productId || it.id || '');
+          const baseId = pid.split('::')[0] || '';
+          return coupon.applicableProducts.includes(pid) || (baseId ? coupon.applicableProducts.includes(baseId) : false);
+        });
+        eligibleSubtotal = eligibleItems.reduce(
+          (sum: number, it: any) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1),
+          0
+        );
+      }
     }
 
     let discountAmount = 0;
-    const cartTotal = Number(subtotal) || 0;
-
     if (coupon.discountType === 'percentage') {
-      discountAmount = Math.round((cartTotal * coupon.discountValue) / 100);
+      discountAmount = Math.round((eligibleSubtotal * coupon.discountValue) / 100);
     } else {
-      discountAmount = Math.min(cartTotal, coupon.discountValue);
+      discountAmount = Math.min(eligibleSubtotal, coupon.discountValue);
     }
 
     res.json({
       valid: true,
       coupon: {
-        id: coupon._id,
+        id: String(coupon._id),
         code: coupon.code,
         name: coupon.name,
         discountType: coupon.discountType,

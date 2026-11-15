@@ -85,7 +85,13 @@ const quoteCoupon = async (code: string, subtotal: number, productIds: string[])
     return { error: 'Coupon usage limit has been reached' };
   }
   const applicable: string[] = coupon.applicableProducts || [];
-  if (applicable.length > 0 && !productIds.some((id) => applicable.includes(id))) {
+  if (
+    applicable.length > 0 &&
+    !productIds.some((id) => {
+      const baseId = String(id || '').split('::')[0] || '';
+      return applicable.includes(id) || (baseId ? applicable.includes(baseId) : false);
+    })
+  ) {
     return { error: 'This coupon is not applicable to the items in your cart' };
   }
   const discount =

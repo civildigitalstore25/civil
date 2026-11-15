@@ -13,7 +13,7 @@ interface CartContextType {
   updateQuantity: (id: string, delta: number) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
-  applyCoupon: (code: string) => { success: boolean; message: string };
+  applyCoupon: (code: string) => Promise<{ success: boolean; message: string }>;
   removeCoupon: () => void;
   summary: CartSummary;
 }
@@ -117,13 +117,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAppliedCoupon(null);
   };
 
-  const applyCoupon = (code: string): { success: boolean; message: string } => {
+  const applyCoupon = async (code: string): Promise<{ success: boolean; message: string }> => {
     const items = cartItems.map((item) => ({
       productId: item.productId,
       price: item.price,
       quantity: item.quantity,
     }));
-    const result = couponService.validateCouponCode(code, items);
+    const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const result = await couponService.validateCouponCode(code, items, subtotal);
     if (result.valid && result.coupon) {
       setAppliedCoupon({
         code: result.coupon.code,
