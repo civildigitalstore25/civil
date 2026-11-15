@@ -2,16 +2,13 @@ import { STORAGE_KEYS, storageService } from './storageService';
 import type { Coupon, CouponFormData, CouponValidationResult } from '../types/coupon';
 import { apiRequest } from './apiClient';
 
-// Legacy hardcoded coupon codes that must never be defaulted or permitted unless explicitly created
-const HARDCODED_CODES = ['SAVE2024', 'WELCOME10', 'SAVE200', 'CIVIL10'];
-
+// Helper to sanitize coupons from local cache, filtering out legacy mock entries
 const sanitizeCoupons = (coupons: Coupon[]): Coupon[] => {
   if (!Array.isArray(coupons)) return [];
   return coupons.filter(
     (c) =>
       c &&
       c.code &&
-      !HARDCODED_CODES.includes(c.code.trim().toUpperCase()) &&
       !String(c.id || c._id || '').startsWith('coup-')
   );
 };
@@ -322,7 +319,7 @@ export const couponService = {
         message: data?.message || 'Invalid coupon code. Please check and try again.',
       };
     } catch {
-      // Backend unreachable: validate against local active coupons (which are sanitized to never contain hardcoded codes)
+      // Backend unreachable: validate against local active coupons
       const coupon = this.getCouponByCode(clean);
 
       if (!coupon) {

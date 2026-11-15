@@ -2,14 +2,8 @@ import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import Coupon from '../models/Coupon.js';
 
-// Legacy hardcoded coupon codes that must not exist by default
-const DEFAULT_HARDCODED_CODES = ['SAVE2024', 'WELCOME10', 'SAVE200', 'CIVIL10'];
-
 export const getCoupons = async (_req: Request, res: Response): Promise<void> => {
   try {
-    // Purge legacy hardcoded default coupons if any exist in the DB
-    await Coupon.deleteMany({ code: { $in: DEFAULT_HARDCODED_CODES } });
-
     const coupons = await Coupon.find().sort({ createdAt: -1 });
     
     // Auto-update status for expired or limit-reached coupons if active
