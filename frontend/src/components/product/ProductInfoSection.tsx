@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Headphones, ShieldCheck, Zap } from 'lucide-react';
+import { ShieldCheck, Zap } from 'lucide-react';
 import type { Product } from '../../types/product';
 import { useCart } from '../../context/CartContext';
 import ProductAccessPicker from './ProductAccessPicker';
@@ -261,11 +261,10 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({ product 
         )
       )}
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 pb-20 sm:pb-0">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 pb-20 sm:pb-0">
         {[
-          { title: 'Secure checkout', text: 'Safe payment', icon: ShieldCheck },
+          { title: 'Secure payment', text: 'Safe checkout', icon: ShieldCheck },
           { title: 'Instant delivery', text: 'Digital download', icon: Zap },
-          { title: 'WhatsApp support', text: 'Help on chat', icon: Headphones },
         ].map((item) => (
           <div key={item.title} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-amber-600 shadow-sm">

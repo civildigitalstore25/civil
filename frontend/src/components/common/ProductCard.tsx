@@ -17,9 +17,10 @@ import OfferCountdown from '../product/OfferCountdown';
 
 interface ProductCardProps {
   product: Product;
+  compact?: boolean;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+export const ProductCard: React.FC<ProductCardProps> = ({ product, compact = false }) => {
   const { addToCart } = useCart();
   const navigate = useNavigate();
   const [isAdded, setIsAdded] = useState(false);
@@ -62,14 +63,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   };
 
   return (
-    <div className="group flex h-full w-full flex-col justify-between rounded-xl border border-slate-200 bg-white p-2 shadow-sm transition-all duration-300 hover:border-[#F5A623]/80 hover:shadow-xl sm:rounded-2xl sm:p-4 sm:shadow-md sm:hover:-translate-y-1">
+    <div
+      className={`group flex h-full w-full flex-col justify-between rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:border-[#F5A623]/80 hover:shadow-xl sm:hover:-translate-y-1 ${
+        compact ? 'p-2 sm:p-3 sm:rounded-xl' : 'p-2 sm:p-4 sm:rounded-2xl sm:shadow-md'
+      }`}
+    >
       <div>
         <Link
           to={`/${product.slug}/`}
-          className="relative mb-2 block aspect-square w-full overflow-hidden rounded-lg border border-slate-100 bg-gradient-to-b from-slate-50 to-white sm:mb-4 sm:aspect-[4/3] sm:rounded-xl"
+          className={`relative block w-full overflow-hidden rounded-lg border border-slate-100 bg-gradient-to-b from-slate-50 to-white ${
+            compact ? 'mb-1.5 sm:mb-2.5 aspect-square sm:rounded-lg' : 'mb-2 sm:mb-4 aspect-square sm:aspect-[4/3] sm:rounded-xl'
+          }`}
         >
           {product.images[0] ? (
-            <div className="flex h-full w-full items-center justify-center p-1.5 sm:p-4">
+            <div className={`flex h-full w-full items-center justify-center ${compact ? 'p-1 sm:p-2.5' : 'p-1.5 sm:p-4'}`}>
               <img
                 src={product.images[0]}
                 alt={product.name}
@@ -131,15 +138,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
 
         <Link to={`/${product.slug}/`} className="block">
-          <h3 className="mb-1 line-clamp-2 text-[13px] font-bold leading-snug text-slate-900 transition-colors group-hover:text-[#F5A623] sm:mb-2 sm:text-lg">
+          <h3
+            className={`line-clamp-2 font-bold leading-snug text-slate-900 transition-colors group-hover:text-[#F5A623] ${
+              compact ? 'mb-1 text-[12px] sm:mb-1.5 sm:text-[13px]' : 'mb-1 text-[13px] sm:mb-2 sm:text-lg'
+            }`}
+          >
             {product.name}
           </h3>
         </Link>
 
         {(displayText(product.format) || displayText(product.fileSize)) && (
-          <div className="mb-2 hidden items-center gap-2 text-[11px] font-medium text-slate-500 sm:mb-4 sm:flex">
+          <div
+            className={`hidden items-center gap-1.5 font-medium text-slate-500 sm:flex ${
+              compact ? 'mb-1.5 text-[10px]' : 'mb-2 text-[11px] sm:mb-4 sm:gap-2'
+            }`}
+          >
             {displayText(product.format) && (
-              <span className="rounded border border-slate-200 bg-slate-100 px-2 py-0.5 font-semibold text-slate-700">
+              <span className="rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-700">
                 {displayText(product.format)}
               </span>
             )}
@@ -148,13 +163,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         )}
       </div>
 
-      <div className="border-t border-slate-100 pt-1.5 sm:pt-3">
-        <div className="mb-1.5 flex items-center justify-between gap-1 sm:mb-2">
+      <div className={`border-t border-slate-100 ${compact ? 'pt-1.5 sm:pt-2' : 'pt-1.5 sm:pt-3'}`}>
+        <div className={`flex items-center justify-between gap-1 ${compact ? 'mb-1 sm:mb-1.5' : 'mb-1.5 sm:mb-2'}`}>
           <div className="flex min-w-0 items-baseline gap-1 sm:gap-2">
             {freeOn ? (
-              <span className="text-sm font-black text-emerald-600 sm:text-xl">FREE</span>
+              <span className={`font-black text-emerald-600 ${compact ? 'text-sm sm:text-base' : 'text-sm sm:text-xl'}`}>
+                FREE
+              </span>
             ) : (
-              <span className="truncate text-sm font-black text-slate-900 sm:text-xl">
+              <span className={`truncate font-black text-slate-900 ${compact ? 'text-sm sm:text-base' : 'text-sm sm:text-xl'}`}>
                 {price > 0 ? `₹${price.toLocaleString('en-IN')}` : 'On request'}
               </span>
             )}
@@ -167,7 +184,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
           {offPercent > 0 && (
             <span
-              className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold sm:rounded-md sm:px-2 sm:text-[11px] ${
+              className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold ${
+                compact ? 'text-[9px]' : 'sm:rounded-md sm:px-2 sm:text-[11px]'
+              } ${
                 freeOn
                   ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
                   : 'border-[#F5A623]/30 bg-[#F5A623]/15 text-[#D97706]'
@@ -192,10 +211,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <button
           type="button"
           onClick={handleAddToCart}
-          className={`flex w-full cursor-pointer items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] font-bold shadow-sm transition-all duration-200 sm:gap-2 sm:rounded-xl sm:py-2.5 sm:text-sm sm:shadow-md ${
+          className={`flex w-full cursor-pointer items-center justify-center gap-1 rounded-lg text-white shadow-sm transition-all duration-200 ${
+            compact
+              ? 'py-1.5 sm:py-2 text-[11px] sm:text-xs'
+              : 'py-1.5 sm:py-2.5 text-[11px] sm:text-sm sm:rounded-xl sm:shadow-md sm:hover:-translate-y-0.5'
+          } ${
             isAdded
-              ? 'bg-emerald-600 text-white shadow-emerald-600/20 hover:bg-emerald-700'
-              : 'bg-gradient-to-r from-[#F5A623] to-[#FFAA00] text-white shadow-amber-500/20 hover:from-[#FFAA00] hover:to-[#F5A623] sm:hover:-translate-y-0.5'
+              ? 'bg-emerald-600 shadow-emerald-600/20 hover:bg-emerald-700'
+              : 'bg-gradient-to-r from-[#F5A623] to-[#FFAA00] shadow-amber-500/20 hover:from-[#FFAA00] hover:to-[#F5A623]'
           }`}
         >
           <svg className="hidden h-4 w-4 fill-current sm:block" viewBox="0 0 24 24">
