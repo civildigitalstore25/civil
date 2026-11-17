@@ -3,7 +3,7 @@ import type { AppliedCoupon } from '../../types/cart';
 
 interface CouponCardProps {
   appliedCoupon: AppliedCoupon | null;
-  onApplyCoupon: (code: string) => { success: boolean; message: string };
+  onApplyCoupon: (code: string) => { success: boolean; message: string } | Promise<{ success: boolean; message: string }>;
   onRemoveCoupon: () => void;
 }
 
@@ -13,23 +13,29 @@ export const CouponCard: React.FC<CouponCardProps> = ({
   onRemoveCoupon
 }) => {
   const [couponCode, setCouponCode] = useState('');
+  const [isApplying, setIsApplying] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(
     null
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanCode = couponCode.trim();
     if (!cleanCode) {
       setFeedback({ type: 'error', message: 'Please enter a coupon code.' });
       return;
     }
-    const result = onApplyCoupon(cleanCode);
-    if (result.success) {
-      setFeedback({ type: 'success', message: result.message });
-      setCouponCode('');
-    } else {
-      setFeedback({ type: 'error', message: result.message });
+    setIsApplying(true);
+    try {
+      const result = await onApplyCoupon(cleanCode);
+      if (result.success) {
+        setFeedback({ type: 'success', message: result.message });
+        setCouponCode('');
+      } else {
+        setFeedback({ type: 'error', message: result.message });
+      }
+    } finally {
+      setIsApplying(false);
     }
   };
 
@@ -79,10 +85,10 @@ export const CouponCard: React.FC<CouponCardProps> = ({
             />
             <button
               type="submit"
-              disabled={!couponCode.trim()}
+              disabled={!couponCode.trim() || isApplying}
               className="bg-[#F5A623] hover:bg-[#e0951a] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition-colors shadow-sm cursor-pointer shrink-0"
             >
-              Apply
+              {isApplying ? 'Applying...' : 'Apply'}
             </button>
           </div>
 

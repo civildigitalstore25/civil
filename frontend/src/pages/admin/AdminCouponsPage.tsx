@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminLayout from '../../components/admin/AdminLayout';
 import ConfirmModal from '../../components/admin/ConfirmModal';
 import CouponHeader from '../../components/admin/coupon/CouponHeader';
@@ -8,7 +8,11 @@ import { useCoupons } from '../../context/CouponContext';
 import type { Coupon } from '../../types/coupon';
 
 export const AdminCouponsPage: React.FC = () => {
-  const { coupons, deleteCoupon, toggleStatus } = useCoupons();
+  const { coupons, deleteCoupon, toggleStatus, refreshCoupons, isLoading } = useCoupons();
+
+  useEffect(() => {
+    void refreshCoupons();
+  }, [refreshCoupons]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [couponToEdit, setCouponToEdit] = useState<Coupon | null>(null);
@@ -36,10 +40,10 @@ export const AdminCouponsPage: React.FC = () => {
     setCouponToDelete(coupon);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (couponToDelete) {
       const code = couponToDelete.code;
-      const result = deleteCoupon(couponToDelete.id || couponToDelete._id!);
+      const result = await deleteCoupon(couponToDelete.id || couponToDelete._id!);
       if (result.success) {
         showToast(`Coupon "${code}" deleted successfully.`, 'success');
       } else {
@@ -49,8 +53,8 @@ export const AdminCouponsPage: React.FC = () => {
     }
   };
 
-  const handleToggleStatus = (coupon: Coupon) => {
-    const result = toggleStatus(coupon.id || coupon._id!);
+  const handleToggleStatus = async (coupon: Coupon) => {
+    const result = await toggleStatus(coupon.id || coupon._id!);
     if (result.success) {
       const nextStatus = result.status === 'active' ? 'Activated' : 'Deactivated';
       showToast(`Coupon "${coupon.code}" ${nextStatus}.`, 'success');
@@ -79,13 +83,19 @@ export const AdminCouponsPage: React.FC = () => {
       <CouponHeader totalCoupons={coupons.length} onCreateClick={handleOpenCreateModal} />
 
       {/* Coupon Table & Card Listing */}
-      <CouponTable
-        coupons={coupons}
-        onEdit={handleOpenEditModal}
-        onDelete={handleDeleteAttempt}
-        onToggleStatus={handleToggleStatus}
-        onCreateClick={handleOpenCreateModal}
-      />
+      {isLoading && coupons.length === 0 ? (
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-12 text-center text-slate-500 font-semibold text-xs shadow-xs">
+          Loading coupons...
+        </div>
+      ) : (
+        <CouponTable
+          coupons={coupons}
+          onEdit={handleOpenEditModal}
+          onDelete={handleDeleteAttempt}
+          onToggleStatus={handleToggleStatus}
+          onCreateClick={handleOpenCreateModal}
+        />
+      )}
 
       {/* Create / Edit Coupon Modal */}
       <CouponModal
