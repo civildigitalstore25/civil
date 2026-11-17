@@ -322,6 +322,45 @@ export const getMyProductReview = async (req: AuthRequest, res: Response): Promi
   }
 };
 
+/**
+ * GET /api/reviews/mine?productIds=a,b,c - the signed-in user's own reviews for several products at once
+ * (used by the order details page), plus which of those products still exist and accept reviews.
+ */
+export const getMyReviewsForProducts = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const user = req.user;
+    if (!user) return sendError(res, 401, 'Please log in to continue.');
+    const ids = [
+      ...new Set(
+        queryString(req.query.productIds)
+          .split(',')
+          .map((id) => id.trim())
+          .filter(isObjectId),
+      ),
+    ].slice(0, 50);
+    if (!ids.length) {
+      res.json({ success: true, reviews: {}, products: {} });
+      return;
+    }
+
+    const [reviews, products] = await Promise.all([
+      Review.find({ user: user._id, product: { $in: ids } }),
+      Product.find({ _id: { $in: ids } }).select('_id slug status').lean(),
+    ]);
+
+    const reviewMap: Record<string, ReturnType<typeof ownReview>> = {};
+    for (const review of reviews) reviewMap[String(review.product)] = ownReview(review);
+    const productMap: Record<string, { slug: string; reviewable: boolean }> = {};
+    for (const product of products) {
+      productMap[String(product._id)] = { slug: String(product.slug || ''), reviewable: product.status === 'active' };
+    }
+
+    res.json({ success: true, reviews: reviewMap, products: productMap });
+  } catch (error) {
+    handleUnexpected(res, error, 'Unable to load your reviews right now.');
+  }
+};
+
 /** Apply a customer's edit to their own review. Any customer edit goes back to admin approval. */
 const applyCustomerEdit = async (review: IReview, user: IUser, input: ReviewInput, productId: string) => {
   const unchanged =
@@ -363,7 +402,8 @@ export const createReview = async (req: AuthRequest, res: Response): Promise<voi
     const parsed = validateReviewInput(body);
     if (!parsed.ok) return sendError(res, 400, parsed.message, parsed.field);
 
-    if (isAdminUser(user)) {
+    // asCustomer: an admin reviewing a product from their own order is treated like any customer.
+    if (isAdminUser(user) && body.asCustomer !== true) {
       const nameCheck = validateDisplayName(body.displayName ?? user.name);
       if (!nameCheck.ok) return sendError(res, 400, nameCheck.message, 'displayName');
       const review = await Review.create({
@@ -443,7 +483,8 @@ export const updateReview = async (req: AuthRequest, res: Response): Promise<voi
     const parsed = validateReviewInput(body);
     if (!parsed.ok) return sendError(res, 400, parsed.message, parsed.field);
 
-    if (!admin) {
+    // Admins editing the review they wrote from their own order (asCustomer) go through the customer flow too.
+    if (!admin || (isOwner && body.asCustomer === true)) {
       const result = await applyCustomerEdit(review, user, parsed.value, String(review.product));
       if (result.wasApproved && result.changed) await syncProductRating(review.product);
       res.json({

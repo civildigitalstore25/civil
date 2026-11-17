@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { AlertCircle, ArrowLeft, CheckCircle2, Circle, CreditCard, Printer, User, XCircle } from 'lucide-react';
 import AnnouncementBar from '../../components/layout/AnnouncementBar';
 import Header from '../../components/layout/Header';
@@ -12,6 +12,9 @@ import {
   CopyButton, ItemAction, ItemThumb, PaymentBadge, Pill, StatusBadge, SUPPORT_WHATSAPP, accessType, formatIst, inr,
   isFreeOrder, isPaid, itemName, orderRef, useOrderDownload,
 } from '../../components/orders/orderUi';
+import { OrderItemReview, OrderReviewModal } from '../../components/orders/OrderItemReview';
+import { useOrderReviews } from '../../components/orders/useOrderReviews';
+import ReviewToast from '../../components/review/ReviewToast';
 
 type Step = { label: string; time?: string; state: 'done' | 'current' | 'failed' | 'todo' };
 
@@ -36,8 +39,8 @@ const buildTimeline = (o: Order): Step[] => {
   ];
 };
 
-const Card: React.FC<{ title: string; icon?: React.ReactNode; children: React.ReactNode; className?: string }> = ({ title, icon, children, className = '' }) => (
-  <section className={`rounded-3xl border border-slate-200 bg-white p-5 shadow-xs print:rounded-none print:border-slate-300 print:shadow-none ${className}`}>
+const Card: React.FC<{ title: string; icon?: React.ReactNode; children: React.ReactNode; className?: string; id?: string }> = ({ title, icon, children, className = '', id }) => (
+  <section id={id} className={`rounded-3xl border border-slate-200 bg-white p-5 shadow-xs print:rounded-none print:border-slate-300 print:shadow-none ${className}`}>
     <h2 className="mb-4 flex items-center gap-2 text-sm font-extrabold uppercase tracking-wide text-slate-700">{icon}{title}</h2>
     {children}
   </section>
@@ -57,6 +60,15 @@ export const OrderDetailsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const dl = useOrderDownload();
+  const reviews = useOrderReviews(order);
+  const { hash } = useLocation();
+
+  // "Rate & review" link from My Orders lands on #items once the order has loaded.
+  useEffect(() => {
+    if (!loading && order && hash === '#items') {
+      document.getElementById('items')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [loading, order, hash]);
 
   useEffect(() => {
     let active = true;
@@ -117,9 +129,12 @@ export const OrderDetailsPage: React.FC = () => {
   const discount = order.couponDiscount || 0;
   const method = isFreeOrder(order) ? 'Free' : order.paymentMethod && order.paymentMethod !== '-' ? order.paymentMethod : 'PhonePe';
   const waText = encodeURIComponent(`Hi, I need help with my order ${ref}.`);
+  const awaitingReviewablePayment = order.status !== 'Cancelled' && order.paymentStatus !== 'Failed' && !isPaid(order);
 
   return chrome(
     <>
+      <ReviewToast toast={reviews.toast} onClose={reviews.dismissToast} />
+      <OrderReviewModal state={reviews} />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1">
           {back}
@@ -193,22 +208,33 @@ export const OrderDetailsPage: React.FC = () => {
         </Card>
       </div>
 
-      <Card title={`Items (${order.items.length})`}>
+      <Card title={`Items (${order.items.length})`} id="items" className="scroll-mt-40">
+        {reviews.error && (
+          <p className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700 print:hidden">
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {reviews.error}
+            <button type="button" onClick={reviews.retry} className="font-extrabold underline">Retry</button>
+          </p>
+        )}
         <div className="divide-y divide-slate-100">
           {order.items.map((item) => (
-            <div key={item.id || item.productId} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-center gap-3">
+            <div key={item.id || item.productId} className="flex flex-wrap items-center gap-x-4 gap-y-3 py-3 sm:flex-nowrap">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
                 <span className="print:hidden"><ItemThumb item={item} /></span>
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-slate-900">{itemName(item)}</p>
                   <p className="text-[11px] font-semibold text-slate-500">
                     {accessType(item)} &middot; {item.fileFormat || 'ZIP Download'} &middot; {inr(item.price)} x {item.quantity}
                   </p>
+                  {awaitingReviewablePayment && (
+                    <p className="mt-0.5 text-[10px] font-medium text-slate-400 print:hidden">You can review this once payment is complete.</p>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center justify-between gap-4 sm:justify-end">
-                <span className="text-sm font-extrabold">{item.price > 0 ? inr(item.price * item.quantity) : 'Free'}</span>
+              <span className="shrink-0 self-start text-sm font-extrabold sm:self-center">{item.price > 0 ? inr(item.price * item.quantity) : 'Free'}</span>
+              {/* Mobile: full-width row under the name, buttons split evenly. Desktop: inline after the price. */}
+              <div className="flex w-full gap-2 empty:hidden *:flex-1 *:justify-center sm:w-auto sm:shrink-0 sm:*:flex-none">
                 <ItemAction order={order} item={item} busy={dl.busyKey === `${ref}-${item.productId}`} onDownload={() => void dl.download(order, item)} />
+                <OrderItemReview item={item} state={reviews} />
               </div>
             </div>
           ))}

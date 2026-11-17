@@ -124,18 +124,29 @@ export const reviewApi = {
     );
   },
 
-  /** Customers: creates (or updates) their review. Admins: publishes a review under `displayName`. */
-  submit(productId: string, input: ReviewInput) {
+  /** The signed-in user's own reviews for several products (order details page), keyed by product id. */
+  getMineForProducts(productIds: string[]) {
+    return call<{
+      reviews: Record<string, OwnReview>;
+      products: Record<string, { slug: string; reviewable: boolean }>;
+    }>(`/reviews/mine${qs({ productIds: productIds.join(',') })}`);
+  },
+
+  /**
+   * Customers: creates (or updates) their review. Admins: publishes a review under `displayName`,
+   * unless `asCustomer` is set (an admin reviewing a product from their own order).
+   */
+  submit(productId: string, input: ReviewInput, options: { asCustomer?: boolean } = {}) {
     return call<{ review: OwnReview; updated?: boolean }>(`/reviews/product/${enc(productId)}`, {
       method: 'POST',
-      body: JSON.stringify(input),
+      body: JSON.stringify(options.asCustomer ? { ...input, asCustomer: true } : input),
     });
   },
 
-  update(reviewId: string, input: ReviewInput) {
+  update(reviewId: string, input: ReviewInput, options: { asCustomer?: boolean } = {}) {
     return call<{ review: OwnReview; updated?: boolean }>(`/reviews/${enc(reviewId)}`, {
       method: 'PUT',
-      body: JSON.stringify(input),
+      body: JSON.stringify(options.asCustomer ? { ...input, asCustomer: true } : input),
     });
   },
 

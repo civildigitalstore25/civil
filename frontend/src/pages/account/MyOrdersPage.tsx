@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { AlertCircle, ArrowLeft, CheckCircle2, ChevronRight, Download, PackageOpen, Receipt, Search, Wallet, X } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CheckCircle2, ChevronRight, Download, PackageOpen, Receipt, Search, Star, Wallet, X } from 'lucide-react';
 import AnnouncementBar from '../../components/layout/AnnouncementBar';
 import Header from '../../components/layout/Header';
 import Navbar from '../../components/layout/Navbar';
@@ -250,7 +250,12 @@ export const MyOrdersPage: React.FC = () => {
                     ))}
                   </div>
 
-                  <div className="flex justify-end border-t border-slate-100 px-5 py-3">
+                  <div className="flex items-center justify-end gap-4 border-t border-slate-100 px-5 py-3">
+                    {canDownload(order) && (
+                      <Link to={`/account/orders/${encodeURIComponent(ref)}#items`} className="inline-flex items-center gap-1 text-xs font-extrabold text-slate-600 hover:text-[#D97706] hover:underline">
+                        <Star className="h-3.5 w-3.5" /> Rate &amp; review
+                      </Link>
+                    )}
                     <Link to={`/account/orders/${encodeURIComponent(ref)}`} className="inline-flex items-center gap-1 text-xs font-extrabold text-[#D97706] hover:underline">
                       View details <ChevronRight className="h-3.5 w-3.5" />
                     </Link>
