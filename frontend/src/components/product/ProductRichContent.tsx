@@ -30,13 +30,16 @@ const copyStyles = `
 .product-copy ul li::before {
   content: "";
   position: absolute;
-  left: 0.9rem;
-  top: 1.05rem;
-  width: 0.55rem;
-  height: 0.55rem;
+  left: 0.95rem;
+  top: calc(0.8rem + 0.75em - 0.25rem);
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 999px;
   background: #F5A623;
 }
+.product-copy li > p,.product-copy li > div { margin: 0; color: inherit; font-size: inherit; line-height: inherit; }
+.product-copy li > p + p { margin-top: 0.35rem; }
+.product-copy li > br:first-child,.product-copy li > br:last-child { display: none; }
 .product-copy ol { padding-left: 1.25rem; color: #334155; }
 .product-copy table { width: 100%; border-collapse: collapse; background: #fff; margin: 1rem 0; }
 .product-copy th,.product-copy td { border: 1px solid #e2e8f0; padding: 0.7rem 0.85rem; text-align: left; }

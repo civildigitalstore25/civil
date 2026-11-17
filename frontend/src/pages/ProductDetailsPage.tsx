@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AnnouncementBar from '../components/layout/AnnouncementBar';
 import Header from '../components/layout/Header';
@@ -13,6 +13,8 @@ import ProductMediaSections from '../components/product/ProductMediaSections';
 import WhatsAppButton from '../components/common/WhatsAppButton';
 import { useProducts } from '../context/ProductContext';
 import type { Product } from '../types/product';
+import type { ReviewSummary } from '../types/review';
+import { reviewApi } from '../services/reviewApi';
 
 interface ProductDetailsPageProps {
   product?: Product;
@@ -25,6 +27,30 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ product:
   const searchSlug = slug || id || '';
 
   const product = propProduct || (searchSlug ? getProductBySlug(searchSlug) : undefined);
+  const productId = product?.id || '';
+
+  // Live rating from approved reviews so the header stars always match the Reviews tab.
+  const [summaryState, setSummaryState] = useState<{ productId: string; summary: ReviewSummary } | null>(null);
+  const reviewSummary = summaryState && summaryState.productId === productId ? summaryState.summary : null;
+  const setReviewSummary = useCallback((summary: ReviewSummary) => setSummaryState({ productId, summary }), [productId]);
+  useEffect(() => {
+    if (!productId) return;
+    let cancelled = false;
+    void reviewApi.getProductReviews(productId, { limit: 1 }).then((result) => {
+      if (!cancelled && result.ok) setSummaryState({ productId, summary: result.summary });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
+
+  const displayProduct = useMemo(
+    () =>
+      product && reviewSummary
+        ? { ...product, rating: reviewSummary.averageRating, reviewCount: reviewSummary.totalReviews }
+        : product,
+    [product, reviewSummary],
+  );
 
   if (!product) {
     return (
@@ -78,13 +104,13 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ product:
 
           {/* Right: Product Information (6 cols lg) */}
           <div className="lg:col-span-6 w-full">
-            <ProductInfoSection product={product} />
+            <ProductInfoSection product={displayProduct || product} />
           </div>
         </div>
 
         {/* Product Information Tabs */}
         <ProductMediaSections product={product} />
-        <ProductTabs product={product} />
+        <ProductTabs product={product} reviewSummary={reviewSummary} onReviewSummaryChange={setReviewSummary} />
 
         {/* Related Products */}
         <RelatedProductsSection currentProductId={product.id} products={products} />

@@ -8,6 +8,7 @@ import orderRoutes from './orderRoutes.js';
 import downloadRoutes from './downloadRoutes.js';
 import paymentRoutes from './paymentRoutes.js';
 import contactRoutes from './contactRoutes.js';
+import reviewRoutes from './reviewRoutes.js';
 
 const router = Router();
 
@@ -21,5 +22,6 @@ router.use('/orders', orderRoutes);
 router.use('/downloads', downloadRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/contact', contactRoutes);
+router.use('/reviews', reviewRoutes);
 
 export default router;

@@ -34,12 +34,11 @@ export const positiveAmount = (value?: string | number) => {
   return Number.isFinite(amount) && amount > 0 ? amount : 0;
 };
 
+/**
+ * Rating shown on cards / product header. Product.rating & reviewCount are kept in sync with approved
+ * reviews by the backend (reviewController.syncProductRating).
+ */
 export const reviewStats = (product: Product) => {
-  const list = product.reviews || [];
-  if (list.length > 0) {
-    const rating = list.reduce((sum, review) => sum + (review.rating || 0), 0) / list.length;
-    return { rating, count: list.length };
-  }
   const count = product.reviewCount || 0;
   const rating = product.rating || 0;
   if (count <= 0 || rating <= 0) return null;

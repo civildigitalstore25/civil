@@ -23,13 +23,18 @@ app.use(helmet({
 app.use(
   cors({
     origin: (origin, callback) => {
+      // Reflect allowed origins; never throw — an Error here becomes a 500 without
+      // ACAO headers, which Chrome reports as a CORS failure on PATCH approve/reject.
       if (!origin || allowedOrigins.includes(origin) || !config.isProduction) {
         callback(null, true);
-      } else {
-        callback(new Error(`Origin ${origin} not allowed by CORS`));
+        return;
       }
+      callback(null, false);
     },
     credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 204,
   })
 );
 

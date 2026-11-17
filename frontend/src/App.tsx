@@ -31,6 +31,7 @@ import AdminCouponsPage from './pages/admin/AdminCouponsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
 import AdminProfilePage from './pages/admin/AdminProfilePage';
+import AdminReviewsPage from './pages/admin/AdminReviewsPage';
 
 import { AuthProvider } from './context/AuthContext';
 import { ProductProvider } from './context/ProductContext';
@@ -218,6 +219,14 @@ function App() {
                     element={
                       <AdminRoute>
                         <AdminOrdersPage />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/reviews"
+                    element={
+                      <AdminRoute>
+                        <AdminReviewsPage />
                       </AdminRoute>
                     }
                   />

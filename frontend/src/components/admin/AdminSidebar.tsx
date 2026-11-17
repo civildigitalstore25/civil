@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import logoWhite from '../../assets/logo_white_text.png';
 import { useAuth } from '../../hooks/useAuth';
 import { useProducts } from '../../context/ProductContext';
+import { REVIEW_EVENTS, reviewApi } from '../../services/reviewApi';
 
 interface AdminSidebarProps {
   mobileOpen?: boolean;
@@ -14,6 +15,26 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
   const { products } = useProducts();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+
+  const [pendingReviews, setPendingReviews] = useState(0);
+  const isAdminUser = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+
+  // Pending review badge - refreshed on navigation and whenever the reviews page moderates something.
+  useEffect(() => {
+    if (!isAdminUser) return;
+    let cancelled = false;
+    const refresh = () => {
+      void reviewApi.admin.pendingCount().then((result) => {
+        if (!cancelled && result.ok) setPendingReviews(result.count);
+      });
+    };
+    refresh();
+    window.addEventListener(REVIEW_EVENTS.changed, refresh);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(REVIEW_EVENTS.changed, refresh);
+    };
+  }, [isAdminUser, pathname]);
 
   const totalProductsCount = products.length;
   const draftProductsCount = products.filter((p) => p.status === 'draft').length;
@@ -98,6 +119,17 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
       ),
     },
     {
+      key: 'reviews',
+      name: 'Reviews',
+      path: '/admin/reviews',
+      badge: pendingReviews > 0 ? pendingReviews : undefined,
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+        </svg>
+      ),
+    },
+    {
       key: 'users',
       name: 'User Management',
       path: '/admin/users',
@@ -137,7 +169,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
     if (item.key === 'categories') {
       return currentUser.permissions.includes('brands') || currentUser.permissions.includes('categories');
     }
-    if (item.key === 'banners' || item.key === 'draft-products') {
+    if (item.key === 'banners' || item.key === 'draft-products' || item.key === 'reviews') {
       return currentUser.permissions.includes(item.key) || currentUser.permissions.includes('products');
     }
     return currentUser.permissions.includes(item.key);
@@ -212,6 +244,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ mobileOpen, setMobil
                     ? 'bg-slate-950/20 text-slate-950'
                     : item.key === 'draft-products'
                     ? 'bg-purple-500/25 text-purple-300 border border-purple-500/40'
+                    : item.key === 'reviews'
+                    ? 'bg-rose-500/25 text-rose-200 border border-rose-500/40'
                     : 'bg-slate-800 text-slate-300'
                 }`}
               >

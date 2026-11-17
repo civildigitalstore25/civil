@@ -88,22 +88,28 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({ product 
 
       <h1 className="text-xl font-bold leading-snug text-slate-900 sm:text-2xl">{product.name}</h1>
 
-      {(reviews || (product.downloadsCount || 0) > 0) && (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          {reviews && (
-            <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-100 px-3 py-1">
-              <span className="text-amber-500">{'★'.repeat(Math.round(reviews.rating))}{'☆'.repeat(5 - Math.round(reviews.rating))}</span>
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+          {reviews ? (
+            <a
+              href="#reviews"
+              title="See customer reviews"
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 transition-colors hover:border-[#F5A623]"
+            >
+              <span className="text-amber-500">{'\u2605'.repeat(Math.round(reviews.rating))}{'\u2606'.repeat(5 - Math.round(reviews.rating))}</span>
               <span className="font-extrabold text-slate-900">{reviews.rating.toFixed(1)}</span>
-              <span className="text-xs text-slate-500">({reviews.count})</span>
-            </div>
+              <span className="text-xs text-slate-500">({reviews.count} review{reviews.count === 1 ? '' : 's'})</span>
+            </a>
+          ) : (
+            <a href="#reviews" className="text-xs font-semibold text-[#D97706] hover:underline">
+              No reviews yet &middot; Write a review
+            </a>
           )}
           {(product.downloadsCount || 0) > 0 && (
             <span className="text-xs font-medium text-slate-500">
               <span className="font-bold text-slate-800">{product.downloadsCount}</span> downloads
             </span>
           )}
-        </div>
-      )}
+      </div>
 
       {freeOn && free.endMs !== null && (
         <OfferCountdown variant="featured" tone="free" targetMs={free.endMs} label="Free for a limited time - claim it before it ends" />

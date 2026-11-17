@@ -217,18 +217,6 @@ export interface Product {
   freeProductEndTime?: string;
 }
 
-export interface CustomerReview {
-  id: string;
-  userId?: string;
-  userName: string;
-  productId: string;
-  productName: string;
-  rating: number;
-  comment: string;
-  createdAt: string;
-  avatar?: string;
-}
-
 export interface FilterState {
   categories: ProductCategory[];
   software: SoftwareCompatibility[];

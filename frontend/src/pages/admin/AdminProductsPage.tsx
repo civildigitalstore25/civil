@@ -695,12 +695,16 @@ export const AdminProductsPage: React.FC = () => {
                                   </span>
                                 )}
 
-                                <div className="flex items-center gap-1 text-[11px] text-amber-500 font-bold">
-                                  <span>★ {product.rating || 4.8}</span>
-                                  <span className="text-slate-400 font-normal">
-                                    ({product.reviewCount || 1})
-                                  </span>
-                                </div>
+                                {(product.reviewCount || 0) > 0 ? (
+                                  <div className="flex items-center gap-1 text-[11px] text-amber-500 font-bold">
+                                    <span>{'\u2605'} {Number(product.rating || 0).toFixed(1)}</span>
+                                    <span className="text-slate-400 font-normal">
+                                      ({product.reviewCount})
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400">No reviews</span>
+                                )}
                               </div>
                             </div>
                           </div>

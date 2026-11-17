@@ -183,6 +183,12 @@ export const updateProduct = async (req: Request, res: Response): Promise<void> 
   try {
     const id = req.params.id;
     const data = req.body;
+    // Rating & review count are derived from approved reviews (see reviewController.syncProductRating).
+    // Ignore any stale values sent back by the admin product form.
+    if (data && typeof data === 'object') {
+      delete data.rating;
+      delete data.reviewCount;
+    }
 
     if (data.slug) {
       const normalizedSlug = data.slug

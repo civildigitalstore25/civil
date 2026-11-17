@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Monitor } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import type { Product } from '../../types/product';
-import CustomerReviewsSection from './CustomerReviewsSection';
+import ProductReviewsSection from '../review/ProductReviewsSection';
+import type { ReviewSummary } from '../../types/review';
 import ProductRichContent from './ProductRichContent';
+import CollapsibleContent from './CollapsibleContent';
 import {
   displayText,
   filledFaqs,
@@ -16,6 +18,9 @@ import {
 
 interface ProductTabsProps {
   product: Product;
+  /** Live approved-review summary from the reviews API (falls back to product.rating / reviewCount). */
+  reviewSummary?: ReviewSummary | null;
+  onReviewSummaryChange?: (summary: ReviewSummary) => void;
 }
 
 type TabId = 'details' | 'features' | 'requirements' | 'reviews' | 'faq';
@@ -32,7 +37,7 @@ const FeatureIcon = ({ name }: { name?: string }) => {
   return <Icon className="h-5 w-5" />;
 };
 
-export const ProductTabs: React.FC<ProductTabsProps> = ({ product }) => {
+export const ProductTabs: React.FC<ProductTabsProps> = ({ product, reviewSummary, onReviewSummaryChange }) => {
   const features = filledFeatures(product);
   const requirements = filledRequirements(product);
   const faqs = filledFaqs(product);
@@ -40,7 +45,7 @@ export const ProductTabs: React.FC<ProductTabsProps> = ({ product }) => {
   const reviews = reviewStats(product);
   const overviewHtml = plainText(product.longDescription) ? product.longDescription || '' : '';
   const detailsHtml = plainText(product.detailsDescription) ? product.detailsDescription || '' : '';
-  const reviewCount = reviews?.count || 0;
+  const reviewCount = reviewSummary ? reviewSummary.totalReviews : reviews?.count || 0;
 
   const tabs: { id: TabId; label: string }[] = [];
   if (overviewHtml || detailsHtml || files.length) tabs.push({ id: 'details', label: 'Product Details' });
@@ -51,11 +56,24 @@ export const ProductTabs: React.FC<ProductTabsProps> = ({ product }) => {
 
   const [activeTab, setActiveTab] = useState<TabId>(tabs[0]?.id || 'reviews');
   const [openFaq, setOpenFaq] = useState(0);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  // "#reviews" deep link (rating chip in the product header) opens the Reviews tab and scrolls to it.
+  useEffect(() => {
+    const openReviews = () => {
+      if (window.location.hash !== '#reviews') return;
+      setActiveTab('reviews');
+      window.setTimeout(() => sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    };
+    openReviews();
+    window.addEventListener('hashchange', openReviews);
+    return () => window.removeEventListener('hashchange', openReviews);
+  }, []);
   const current = tabs.some((tab) => tab.id === activeTab) ? activeTab : tabs[0]?.id;
   if (!tabs.length || !current) return null;
 
   return (
-    <section className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section id="reviews" ref={sectionRef} className="w-full scroll-mt-40 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex gap-1 overflow-x-auto border-b border-slate-200 px-3 sm:px-6">
         {tabs.map((tab) => (
           <button
@@ -75,8 +93,17 @@ export const ProductTabs: React.FC<ProductTabsProps> = ({ product }) => {
         {current === 'details' && (
           <div className="space-y-4">
             <PanelIntro title="Product Details" text={`Full details for ${product.name}.`} />
-            {overviewHtml && <ProductRichContent html={overviewHtml} />}
-            {detailsHtml && <ProductRichContent html={detailsHtml} />}
+            {(overviewHtml || detailsHtml) && (
+              <div>
+                <h3 className="mb-2 text-base font-bold text-slate-900">Description</h3>
+                <CollapsibleContent collapsedHeight={200}>
+                  <div className="space-y-4">
+                    {overviewHtml && <ProductRichContent html={overviewHtml} />}
+                    {detailsHtml && <ProductRichContent html={detailsHtml} />}
+                  </div>
+                </CollapsibleContent>
+              </div>
+            )}
             {files.length > 0 && (
               <ul className="grid gap-2 sm:grid-cols-2">
                 {files.map((file) => (
@@ -147,10 +174,16 @@ export const ProductTabs: React.FC<ProductTabsProps> = ({ product }) => {
 
         {current === 'reviews' && (
           <div>
-            <PanelIntro title={`Reviews (${reviewCount})`} text={reviewCount ? `What buyers say about ${product.name}.` : 'No reviews yet.'} />
-            {reviewCount > 0 && reviews && (
-              <CustomerReviewsSection reviews={product.reviews || []} rating={reviews.rating} reviewCount={reviews.count} />
-            )}
+            <PanelIntro
+              title={`Reviews (${reviewCount})`}
+              text={reviewCount ? `What buyers say about ${product.name}.` : `Be the first to share your experience with ${product.name}.`}
+            />
+            <ProductReviewsSection
+              key={product.id}
+              productId={product.id}
+              productName={product.name}
+              {...(onReviewSummaryChange ? { onSummaryChange: onReviewSummaryChange } : {})}
+            />
           </div>
         )}
       </div>
