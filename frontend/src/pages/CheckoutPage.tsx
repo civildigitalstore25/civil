@@ -8,11 +8,12 @@ import WhatsAppButton from '../components/common/WhatsAppButton';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../hooks/useAuth';
 import { paymentService } from '../services/paymentService';
+import CouponCard from '../components/cart/CouponCard';
 
 export const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { cartItems, summary, appliedCoupon } = useCart();
+  const { cartItems, summary, appliedCoupon, applyCoupon, removeCoupon } = useCart();
   const { currentUser, isAuthenticated } = useAuth();
 
   const [customerName, setCustomerName] = useState(currentUser?.name || '');
@@ -226,69 +227,77 @@ export const CheckoutPage: React.FC = () => {
             </div>
 
             {/* Order Summary Right Side */}
-            <div className="lg:col-span-5 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
-              <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-3">
-                Order Review ({cartItems.length} {cartItems.length === 1 ? 'item' : 'items'})
-              </h3>
+            <div className="lg:col-span-5 space-y-6">
+              {/* Apply Coupon */}
+              <CouponCard
+                appliedCoupon={appliedCoupon}
+                onApplyCoupon={applyCoupon}
+                onRemoveCoupon={removeCoupon}
+              />
 
-              {/* Items List */}
-              <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto pr-1">
-                {cartItems.map((item) => (
-                  <div key={item.id} className="py-3 flex items-center gap-3 text-xs">
-                    {item.image ? (
-                      <img src={item.image} alt={item.name} className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0" />
-                    ) : (
-                      <div className="w-12 h-12 rounded-xl bg-amber-50 text-[#F5A623] flex items-center justify-center font-bold text-lg shrink-0">
-                        📄
+              <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xs space-y-6">
+                <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-3">
+                  Order Review ({cartItems.length} {cartItems.length === 1 ? 'item' : 'items'})
+                </h3>
+
+                {/* Items List */}
+                <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto pr-1">
+                  {cartItems.map((item) => (
+                    <div key={item.id} className="py-3 flex items-center gap-3 text-xs">
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} className="w-12 h-12 rounded-xl object-cover border border-slate-200 shrink-0" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-xl bg-amber-50 text-[#F5A623] flex items-center justify-center font-bold text-lg shrink-0">
+                          📄
+                        </div>
+                      )}
+                      <div className="flex-grow min-w-0">
+                        <h4 className="font-bold text-slate-900 truncate">{item.name}</h4>
+                        <p className="text-[10px] text-slate-500 font-medium">Format: {item.format || 'ZIP'} • Qty: {item.quantity}</p>
                       </div>
-                    )}
-                    <div className="flex-grow min-w-0">
-                      <h4 className="font-bold text-slate-900 truncate">{item.name}</h4>
-                      <p className="text-[10px] text-slate-500 font-medium">Format: {item.format || 'ZIP'} • Qty: {item.quantity}</p>
+                      <div className="font-extrabold text-slate-900 shrink-0">
+                        ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                      </div>
                     </div>
-                    <div className="font-extrabold text-slate-900 shrink-0">
-                      ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                  ))}
+                </div>
+
+                {/* Price Details */}
+                <div className="space-y-2 border-t border-slate-100 pt-4 text-xs">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Subtotal</span>
+                    <span className="font-bold text-slate-900">₹{summary.subtotal.toLocaleString('en-IN')}</span>
+                  </div>
+                  
+                  {summary.couponDiscount > 0 && (
+                    <div className="flex justify-between text-emerald-600 font-bold">
+                      <span>Coupon Discount</span>
+                      <span>-₹{summary.couponDiscount.toLocaleString('en-IN')}</span>
                     </div>
+                  )}
+
+                  <div className="flex justify-between text-slate-600">
+                    <span>Estimated GST (18%)</span>
+                    <span className="font-bold text-slate-900">₹{summary.gst.toLocaleString('en-IN')}</span>
                   </div>
-                ))}
-              </div>
 
-              {/* Price Details */}
-              <div className="space-y-2 border-t border-slate-100 pt-4 text-xs">
-                <div className="flex justify-between text-slate-600">
-                  <span>Subtotal</span>
-                  <span className="font-bold text-slate-900">₹{summary.subtotal.toLocaleString('en-IN')}</span>
-                </div>
-                
-                {summary.couponDiscount > 0 && (
-                  <div className="flex justify-between text-emerald-600 font-bold">
-                    <span>Coupon Discount</span>
-                    <span>-₹{summary.couponDiscount.toLocaleString('en-IN')}</span>
+                  <div className="flex justify-between text-sm font-extrabold text-slate-900 border-t border-slate-100 pt-3">
+                    <span>Total Payable</span>
+                    <span className="text-[#F5A623]">₹{summary.totalPayable.toLocaleString('en-IN')}</span>
                   </div>
-                )}
-
-                <div className="flex justify-between text-slate-600">
-                  <span>Estimated GST (18%)</span>
-                  <span className="font-bold text-slate-900">₹{summary.gst.toLocaleString('en-IN')}</span>
                 </div>
 
-                <div className="flex justify-between text-sm font-extrabold text-slate-900 border-t border-slate-100 pt-3">
-                  <span>Total Payable</span>
-                  <span className="text-[#F5A623]">₹{summary.totalPayable.toLocaleString('en-IN')}</span>
+                {/* Trust Badge */}
+                <div className="p-3 bg-amber-50/50 rounded-2xl border border-amber-200/60 text-[11px] text-amber-900 space-y-1">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <span>🔒</span>
+                    <span>Instant Digital Delivery</span>
+                  </div>
+                  <p className="text-amber-800/80 text-[10px]">
+                    Files will be available immediately for download on the order success page and saved to your account.
+                  </p>
                 </div>
               </div>
-
-              {/* Trust Badge */}
-              <div className="p-3 bg-amber-50/50 rounded-2xl border border-amber-200/60 text-[11px] text-amber-900 space-y-1">
-                <div className="font-bold flex items-center gap-1.5">
-                  <span>🔒</span>
-                  <span>Instant Digital Delivery</span>
-                </div>
-                <p className="text-amber-800/80 text-[10px]">
-                  Files will be available immediately for download on the order success page and saved to your account.
-                </p>
-              </div>
-
             </div>
 
           </div>
