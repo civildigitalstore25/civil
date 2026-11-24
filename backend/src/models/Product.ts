@@ -24,6 +24,8 @@ export interface IProduct extends Document {
   rating: number;
   reviewCount: number;
   downloadsCount: number;
+  /** Total product-detail page views (session-deduped on the client). */
+  viewCount: number;
   badge?: 'Bestseller' | 'New' | 'Popular' | 'Hot' | '';
   isBestSeller: boolean;
   isNewArrival: boolean;
@@ -94,6 +96,7 @@ const productSchema = new Schema<IProduct>(
     rating: { type: Number, default: 0 },
     reviewCount: { type: Number, default: 0 },
     downloadsCount: { type: Number, default: 0 },
+    viewCount: { type: Number, default: 0 },
     badge: { type: String, default: '' },
     isBestSeller: { type: Boolean, default: false },
     isNewArrival: { type: Boolean, default: false },

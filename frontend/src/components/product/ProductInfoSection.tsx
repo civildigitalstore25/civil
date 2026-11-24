@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Zap } from 'lucide-react';
+import { Eye, ShieldCheck, Zap } from 'lucide-react';
 import type { Product } from '../../types/product';
 import { useCart } from '../../context/CartContext';
 import ProductAccessPicker from './ProductAccessPicker';
+import ProductShareButtons from './ProductShareButtons';
 import {
   buildAccessPlans,
   dealState,
@@ -21,9 +22,11 @@ import WhatsAppIcon from '../common/WhatsAppIcon';
 
 interface ProductInfoSectionProps {
   product: Product;
+  /** Live view total from session-deduped tracking (SoftzCart-style). */
+  totalViews?: number;
 }
 
-export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({ product }) => {
+export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({ product, totalViews = 0 }) => {
   const { addToCart } = useCart();
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
@@ -88,6 +91,8 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({ product 
 
       <h1 className="text-xl font-bold leading-snug text-slate-900 sm:text-2xl">{product.name}</h1>
 
+      <ProductShareButtons productName={product.name} variant="inline" />
+
       <div className="flex flex-wrap items-center gap-2 text-xs">
           {reviews ? (
             <a
@@ -103,6 +108,16 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({ product 
             <a href="#reviews" className="text-xs font-semibold text-[#D97706] hover:underline">
               No reviews yet &middot; Write a review
             </a>
+          )}
+          {totalViews > 0 && (
+            <span
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[#F5A623]/40 bg-[#F5A623]/10 px-3 py-1 font-semibold text-[#B45309]"
+              title="Total product page views"
+            >
+              <Eye className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              {totalViews.toLocaleString('en-IN')}
+              <span className="font-medium text-[#B45309]/80">{totalViews === 1 ? 'view' : 'views'}</span>
+            </span>
           )}
           {(product.downloadsCount || 0) > 0 && (
             <span className="text-xs font-medium text-slate-500">

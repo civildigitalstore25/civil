@@ -7,11 +7,13 @@ import Footer from '../components/layout/Footer';
 import Breadcrumb from '../components/product/Breadcrumb';
 import ProductGallery from '../components/product/ProductGallery';
 import ProductInfoSection from '../components/product/ProductInfoSection';
+import ProductShareButtons from '../components/product/ProductShareButtons';
 import ProductTabs from '../components/product/ProductTabs';
 import RelatedProductsSection from '../components/product/RelatedProductsSection';
 import ProductMediaSections from '../components/product/ProductMediaSections';
 import WhatsAppButton from '../components/common/WhatsAppButton';
 import { useProducts } from '../context/ProductContext';
+import { useProductViewTracking } from '../hooks/useProductViewTracking';
 import type { Product } from '../types/product';
 import type { ReviewSummary } from '../types/review';
 import { reviewApi } from '../services/reviewApi';
@@ -28,6 +30,7 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ product:
 
   const product = propProduct || (searchSlug ? getProductBySlug(searchSlug) : undefined);
   const productId = product?.id || '';
+  const { totalViews } = useProductViewTracking(productId || undefined);
 
   // Live rating from approved reviews so the header stars always match the Reviews tab.
   const [summaryState, setSummaryState] = useState<{ productId: string; summary: ReviewSummary } | null>(null);
@@ -104,9 +107,11 @@ export const ProductDetailsPage: React.FC<ProductDetailsPageProps> = ({ product:
 
           {/* Right: Product Information (6 cols lg) */}
           <div className="lg:col-span-6 w-full">
-            <ProductInfoSection product={displayProduct || product} />
+            <ProductInfoSection product={displayProduct || product} totalViews={totalViews} />
           </div>
         </div>
+
+        <ProductShareButtons productName={product.name} variant="floating" />
 
         {/* Product Information Tabs */}
         <ProductMediaSections product={product} />

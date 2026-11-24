@@ -121,4 +121,21 @@ export const productApi = {
     const { response, data } = await apiRequest<ProductMutationResponse>(path, { method: 'PATCH' });
     return response.ok && data.product ? mapProduct(data.product) : null;
   },
+
+  async incrementView(id: string): Promise<number> {
+    const { response, data } = await apiRequest<{ success?: boolean; viewCount?: number }>(
+      `/products/${id}/increment-view`,
+      { method: 'POST', body: JSON.stringify({}) },
+    );
+    if (!response.ok) throw new Error('Failed to increment view count');
+    return data.viewCount || 0;
+  },
+
+  async getViewCount(id: string): Promise<number> {
+    const { response, data } = await apiRequest<{ success?: boolean; viewCount?: number }>(
+      `/products/${id}/view-count`,
+    );
+    if (!response.ok) return 0;
+    return data.viewCount || 0;
+  },
 };

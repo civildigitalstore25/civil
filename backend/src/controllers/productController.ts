@@ -281,3 +281,35 @@ export const toggleOutOfStock = async (req: Request, res: Response): Promise<voi
     res.status(500).json({ success: false, message: 'Failed to toggle out of stock', error });
   }
 };
+
+/** POST /api/products/:id/increment-view — bump total PDP views. */
+export const incrementProductViewCount = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { viewCount: 1 } },
+      { new: true, select: 'viewCount' },
+    );
+    if (!product) {
+      res.status(404).json({ success: false, message: 'Product not found' });
+      return;
+    }
+    res.json({ success: true, viewCount: product.viewCount || 1 });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to increment view count', error });
+  }
+};
+
+/** GET /api/products/:id/view-count — read views without incrementing. */
+export const getProductViewCount = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const product = await Product.findById(req.params.id).select('viewCount');
+    if (!product) {
+      res.status(404).json({ success: false, message: 'Product not found' });
+      return;
+    }
+    res.json({ success: true, viewCount: product.viewCount || 0 });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to get view count', error });
+  }
+};

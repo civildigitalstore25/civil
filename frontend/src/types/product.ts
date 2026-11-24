@@ -152,6 +152,8 @@ export interface Product {
   rating: number;
   reviewCount: number;
   downloadsCount: number;
+  /** Total product-detail page views. */
+  viewCount?: number;
   badge?: 'Bestseller' | 'New' | 'Popular' | 'Hot' | '';
   shortDescription: string;
   longDescription?: string;

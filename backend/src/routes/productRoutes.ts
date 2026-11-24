@@ -8,7 +8,9 @@ import {
   deleteProduct,
   bulkDeleteProducts,
   toggleBestSeller,
-  toggleOutOfStock
+  toggleOutOfStock,
+  incrementProductViewCount,
+  getProductViewCount,
 } from '../controllers/productController.js';
 import { authenticate, authorizeRoles } from '../middlewares/authMiddleware.js';
 
@@ -17,6 +19,8 @@ const router = Router();
 // Public routes for product viewing
 router.get('/', getProducts);
 router.get('/slug/:slug', getProductBySlug);
+router.post('/:id/increment-view', incrementProductViewCount);
+router.get('/:id/view-count', getProductViewCount);
 router.get('/:id', getProductById);
 
 // Admin protected routes
