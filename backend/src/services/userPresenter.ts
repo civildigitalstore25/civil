@@ -7,6 +7,7 @@ const DEFAULT_ADMIN_PERMISSIONS = [
   'banners',
   'categories',
   'orders',
+  'carts',
   'reviews',
   'users',
   'admins',

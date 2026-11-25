@@ -58,9 +58,10 @@ export const ProductInfoSection: React.FC<ProductInfoSectionProps> = ({ product,
         ...product,
         id: `${product.id}::${selected.id}`,
         name: plans.length > 1 ? `${product.name} (${selected.label})` : product.name,
+        license: selected.label,
         price: selected.priceINR,
         oldPrice: selected.compareINR || 0,
-      },
+      } as typeof product & { license?: string },
       quantity,
     );
   };

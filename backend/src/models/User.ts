@@ -78,7 +78,7 @@ const userSchema = new Schema<IUser>(
     },
     permissions: {
       type: [String],
-      default: ['dashboard', 'products', 'draft-products', 'banners', 'categories', 'orders', 'reviews', 'users', 'admins', 'profile'],
+      default: ['dashboard', 'products', 'draft-products', 'banners', 'categories', 'orders', 'carts', 'reviews', 'users', 'admins', 'profile'],
     },
   },
   {
