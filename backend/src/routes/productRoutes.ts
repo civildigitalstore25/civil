@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   getProducts,
+  getProductSuggestions,
   getProductBySlug,
   getProductById,
   createProduct,
@@ -18,6 +19,7 @@ const router = Router();
 
 // Public routes for product viewing
 router.get('/', getProducts);
+router.get('/suggestions', getProductSuggestions);
 router.get('/slug/:slug', getProductBySlug);
 router.post('/:id/increment-view', incrementProductViewCount);
 router.get('/:id/view-count', getProductViewCount);

@@ -135,5 +135,9 @@ const productSchema = new Schema<IProduct>(
   }
 );
 
+productSchema.index({ status: 1, name: 1 });
+productSchema.index({ status: 1, category: 1, software: 1 });
+productSchema.index({ status: 1, brand: 1 });
+
 export const Product = mongoose.model<IProduct>('Product', productSchema);
 export default Product;
