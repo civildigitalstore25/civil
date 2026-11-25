@@ -8,12 +8,27 @@ import { ensureDbReady } from './config/db.js';
 
 const app: Express = express();
 
+const withWwwVariants = (url: string): string[] => {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname;
+    const altHost = host.startsWith('www.') ? host.slice(4) : `www.${host}`;
+    const primary = parsed.origin;
+    parsed.hostname = altHost;
+    return [primary, parsed.origin];
+  } catch {
+    return url ? [url] : [];
+  }
+};
+
 const allowedOrigins = [
-  config.frontendUrl,
+  ...withWwwVariants(config.frontendUrl),
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:3000',
   'http://127.0.0.1:3000',
+  'https://www.civildigitalstore.com',
+  'https://civildigitalstore.com',
 ].filter(Boolean);
 
 app.use(helmet({

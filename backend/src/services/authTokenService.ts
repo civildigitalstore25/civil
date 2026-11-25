@@ -15,12 +15,16 @@ export const signSessionToken = (user: IUser): string =>
     { expiresIn: AUTH.jwtExpiresIn },
   );
 
+/**
+ * Production storefront (civildigitalstore.com) and API (*.vercel.app) are cross-site.
+ * Chrome only keeps/sends that cookie with SameSite=None; Secure (and Partitioned helps
+ * under third-party cookie restrictions). Localhost uses Lax.
+ */
 const sessionCookieOptions = {
   httpOnly: true,
-  // Frontend and backend are on different Vercel domains → cross-site.
-  // Browsers only send cross-site cookies with SameSite=None; Secure.
   secure: config.isProduction,
   sameSite: config.isProduction ? ('none' as const) : ('lax' as const),
+  ...(config.isProduction ? { partitioned: true } : {}),
   maxAge: AUTH.cookieMaxAgeMs,
   path: '/',
 };
@@ -35,5 +39,6 @@ export const clearSessionCookie = (res: Response): void => {
     secure: sessionCookieOptions.secure,
     sameSite: sessionCookieOptions.sameSite,
     path: sessionCookieOptions.path,
+    ...(config.isProduction ? { partitioned: true } : {}),
   });
 };

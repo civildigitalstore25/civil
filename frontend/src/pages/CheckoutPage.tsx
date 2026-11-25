@@ -7,6 +7,7 @@ import Footer from '../components/layout/Footer';
 import WhatsAppButton from '../components/common/WhatsAppButton';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../hooks/useAuth';
+import { authService } from '../services/authService';
 import { paymentService } from '../services/paymentService';
 import CouponCard from '../components/cart/CouponCard';
 
@@ -14,7 +15,7 @@ export const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { cartItems, summary, appliedCoupon, applyCoupon, removeCoupon } = useCart();
-  const { currentUser, isAuthenticated } = useAuth();
+  const { currentUser, isAuthenticated, logout } = useAuth();
 
   const [customerName, setCustomerName] = useState(currentUser?.name || '');
   const [customerEmail, setCustomerEmail] = useState(currentUser?.email || '');
@@ -23,6 +24,8 @@ export const CheckoutPage: React.FC = () => {
 
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [sessionValid, setSessionValid] = useState(isAuthenticated);
 
   useEffect(() => {
     if (currentUser) {
@@ -32,7 +35,31 @@ export const CheckoutPage: React.FC = () => {
     }
   }, [currentUser]);
 
-  if (!isAuthenticated) {
+  // UI can look signed-in from localStorage while the httpOnly cookie was never
+  // accepted (cross-site API). Re-check /auth/me before allowing checkout.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const me = await authService.fetchMe();
+      if (cancelled) return;
+      if (!me) {
+        await logout();
+        setSessionValid(false);
+      } else {
+        setSessionValid(true);
+      }
+      setSessionChecked(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [logout]);
+
+  if (!sessionChecked) {
+    return null;
+  }
+
+  if (!isAuthenticated || !sessionValid) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -102,9 +129,15 @@ export const CheckoutPage: React.FC = () => {
 
       // Hand off to the PhonePe hosted payment page. Keep the loading state while the browser navigates.
       window.location.assign(result.redirectUrl as string);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('PhonePe payment initiation error:', err);
-      setError(err?.message || 'Unable to start PhonePe payment. Please try again.');
+      const message = err instanceof Error ? err.message : 'Unable to start PhonePe payment. Please try again.';
+      if (/authorization token|sign in|session/i.test(message)) {
+        await logout();
+        navigate('/login', { state: { from: location }, replace: true });
+        return;
+      }
+      setError(message);
       setIsProcessing(false);
     }
   };
