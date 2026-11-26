@@ -280,3 +280,43 @@ export const updateOrderStatus = async (req: AuthRequest, res: Response): Promis
     res.status(500).json({ success: false, message: 'Failed to update order status', error: error.message });
   }
 };
+
+/** Public social-proof feed: first name + first line item only (no PII / drive links). */
+export const getRecentPurchases = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const rawLimit = Number(req.query.limit);
+    const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(Math.floor(rawLimit), 1), 24) : 12;
+
+    const orders = await Order.find({
+      paymentStatus: 'Paid',
+      status: { $ne: 'Cancelled' },
+      'items.0': { $exists: true },
+    })
+      .sort({ paidAt: -1, createdAt: -1 })
+      .limit(limit)
+      .select('customerName items paidAt createdAt')
+      .lean();
+
+    const purchases = orders
+      .map((order) => {
+        const item = order.items?.[0];
+        if (!item?.title) return null;
+        const firstName = String(order.customerName || '')
+          .trim()
+          .split(/\s+/)[0];
+        if (!firstName) return null;
+        return {
+          buyerName: firstName,
+          productTitle: String(item.title),
+          productImage: String(item.image || ''),
+          productId: String(item.productId || ''),
+          purchasedAt: (order.paidAt || order.createdAt)?.toISOString?.() || order.createdAt,
+        };
+      })
+      .filter(Boolean);
+
+    res.json({ success: true, purchases });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Failed to load recent purchases', error: error.message });
+  }
+};

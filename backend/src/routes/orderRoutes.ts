@@ -5,6 +5,7 @@ import {
   getOrderById,
   getAdminOrders,
   updateOrderStatus,
+  getRecentPurchases,
 } from '../controllers/orderController.js';
 import {
   authenticate,
@@ -23,6 +24,9 @@ router.get('/my-orders', authenticate, getMyOrders);
 
 // Admin lists all orders with search/filtering
 router.get('/admin', authenticate, authorizeRoles('admin', 'superadmin'), getAdminOrders);
+
+// Public social-proof toast (must be before /:id)
+router.get('/recent-purchases', getRecentPurchases);
 
 // Get single order details
 router.get('/:id', optionalAuthenticate, getOrderById);
