@@ -4,7 +4,8 @@ import { StarRating } from './StarRating';
 import type { PublicReview } from '../../types/review';
 import { formatReviewDate, reviewInitials } from '../../utils/reviewFormat';
 
-const COLLAPSE_AT = 320;
+/** Match SoftZCart: clamp ~2 lines, then See more / See less. */
+const CLAMP_THRESHOLD = 80;
 
 interface ReviewCardProps {
   review: PublicReview;
@@ -17,8 +18,8 @@ interface ReviewCardProps {
 /** Review card - layout follows civil-ecommerce's ProductDetailReviewCard (avatar, name, stars, date, expandable text). */
 export const ReviewCard: React.FC<ReviewCardProps> = ({ review, highlight = false, footer, actions }) => {
   const [expanded, setExpanded] = useState(false);
-  const long = review.comment.length > COLLAPSE_AT;
-  const text = long && !expanded ? `${review.comment.slice(0, COLLAPSE_AT).trimEnd()}\u2026` : review.comment;
+  const long =
+    review.comment.length > CLAMP_THRESHOLD || review.comment.split('\n').length > 2;
 
   return (
     <article
@@ -48,14 +49,20 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ review, highlight = fals
             <span className="text-xs text-slate-500">{formatReviewDate(review.createdAt)}</span>
           </div>
           {review.title && <p className="mt-2 text-sm font-bold text-slate-900">{review.title}</p>}
-          <p className="mt-1.5 whitespace-pre-line break-words text-sm leading-relaxed text-slate-700">{text}</p>
+          <p
+            className={`mt-1.5 whitespace-pre-line break-words text-sm leading-relaxed text-slate-700 ${
+              expanded ? '' : 'line-clamp-2'
+            }`}
+          >
+            {review.comment}
+          </p>
           {long && (
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
               className="mt-1 text-xs font-bold text-[#D97706] hover:underline"
             >
-              {expanded ? 'Show less' : 'Read more'}
+              {expanded ? 'See less' : 'See more'}
             </button>
           )}
           {footer && <div className="mt-3">{footer}</div>}

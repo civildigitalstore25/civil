@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Loader2, ShieldCheck } from 'lucide-react';
 import { StarPicker } from './StarRating';
 import { REVIEW_LIMITS, type ReviewInput } from '../../types/review';
+import { fromReviewDateInput, toReviewDateInputValue } from '../../utils/reviewFormat';
 
 export interface ReviewFormResult {
   ok: boolean;
@@ -14,6 +15,8 @@ interface ReviewFormProps {
   submitLabel: string;
   /** Admins can post under any name - shows the "Reviewer name" field. */
   showNameField?: boolean;
+  /** Admins can set a custom review date (same as SoftZCart). */
+  showDateField?: boolean;
   initial?: Partial<ReviewInput>;
   note?: React.ReactNode;
   onSubmit: (input: ReviewInput) => Promise<ReviewFormResult>;
@@ -54,6 +57,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   heading,
   submitLabel,
   showNameField = false,
+  showDateField = false,
   initial,
   note,
   onSubmit,
@@ -64,6 +68,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   const [title, setTitle] = useState(initial?.title || '');
   const [comment, setComment] = useState(initial?.comment || '');
   const [displayName, setDisplayName] = useState(initial?.displayName || '');
+  const [reviewDate, setReviewDate] = useState(toReviewDateInputValue(initial?.createdAt));
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState(false);
   const rootRef = useRef<HTMLFormElement>(null);
@@ -80,6 +85,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       title: title.trim(),
       comment: comment.trim(),
       ...(showNameField ? { displayName: displayName.trim() } : {}),
+      ...(showDateField && reviewDate ? { createdAt: fromReviewDateInput(reviewDate) } : {}),
     };
     const nextErrors = validate(input, showNameField);
     setErrors(nextErrors);
@@ -145,6 +151,24 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
           />
           {errors.rating && <p className="mt-1 text-xs font-semibold text-rose-600">{errors.rating}</p>}
         </div>
+
+        {showDateField && (
+          <div>
+            <label htmlFor="review-date" className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-600">
+              Review date
+            </label>
+            <input
+              id="review-date"
+              type="date"
+              value={reviewDate}
+              max={toReviewDateInputValue(new Date().toISOString())}
+              onChange={(e) => setReviewDate(e.target.value)}
+              className={inputClass()}
+              disabled={submitting}
+            />
+            <p className="mt-1 text-[11px] text-slate-500">Optional. Leave blank to use today&apos;s date.</p>
+          </div>
+        )}
 
         <div>
           <label htmlFor="review-title" className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-600">

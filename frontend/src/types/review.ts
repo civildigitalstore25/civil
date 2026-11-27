@@ -50,6 +50,8 @@ export interface ReviewInput {
   title: string;
   comment: string;
   displayName?: string;
+  /** Admin-only custom review date (ISO). */
+  createdAt?: string;
 }
 
 export interface AdminReviewCounts {

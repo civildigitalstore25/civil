@@ -13,7 +13,7 @@ const HIDDEN_PREFIXES = ['/admin', '/login', '/register', '/forgot-password', '/
 const shouldHide = (pathname: string) =>
   HIDDEN_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 
-/** Healargo-style bottom-left toast that cycles real paid purchases. */
+/** Healargo-style toast that cycles real paid purchases. Compact on mobile so it clears the sticky cart bar. */
 export const RecentPurchaseToast: React.FC = () => {
   const { pathname } = useLocation();
   const hidden = shouldHide(pathname);
@@ -84,14 +84,46 @@ export const RecentPurchaseToast: React.FC = () => {
   const item = purchases[index % purchases.length];
   if (!item) return null;
 
+  const thumb = item.productImage ? (
+    <img src={item.productImage} alt="" className="h-full w-full object-contain" />
+  ) : (
+    <span className="text-[10px] font-extrabold text-[#F5A623] sm:text-sm">CDS</span>
+  );
+
   return (
     <div
-      className={`pointer-events-none fixed bottom-6 left-3 z-40 w-[min(100%-1.5rem,20rem)] transition-all duration-500 sm:bottom-6 ${
-        visible ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
+      className={`pointer-events-none fixed bottom-[max(4.75rem,calc(3.75rem+env(safe-area-inset-bottom,0px)))] left-3 z-50 w-[min(calc(100%-5.5rem),18rem)] transition-all duration-500 sm:bottom-6 sm:w-[min(100%-1.5rem,20rem)] ${
+        visible ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
       }`}
       aria-live="polite"
     >
-      <div className="pointer-events-auto relative flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg shadow-slate-900/10">
+      {/* Mobile: compact two-line chip */}
+      <div className="pointer-events-auto relative flex items-center gap-2 rounded-2xl border border-slate-200 bg-white py-1.5 pl-1.5 pr-7 shadow-md sm:hidden">
+        <button
+          type="button"
+          onClick={dismiss}
+          className="absolute right-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:text-slate-700"
+          aria-label="Dismiss"
+        >
+          <X className="h-3 w-3" />
+        </button>
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100">
+          {thumb}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-[11px] leading-tight text-slate-800">
+            <span className="font-extrabold">{item.buyerName}</span>
+            {' bought '}
+            <span className="font-semibold">{item.productTitle}</span>
+          </p>
+          <p className="mt-0.5 truncate text-[10px] font-medium leading-tight text-slate-500">
+            {formatTimeAgo(item.purchasedAt)}
+          </p>
+        </div>
+      </div>
+
+      {/* Desktop / tablet: original card */}
+      <div className="pointer-events-auto relative hidden items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-lg shadow-slate-900/10 sm:flex">
         <button
           type="button"
           onClick={dismiss}
@@ -100,15 +132,9 @@ export const RecentPurchaseToast: React.FC = () => {
         >
           <X className="h-3.5 w-3.5" />
         </button>
-
         <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
-          {item.productImage ? (
-            <img src={item.productImage} alt="" className="h-full w-full object-contain" />
-          ) : (
-            <span className="text-sm font-extrabold text-[#F5A623]">CDS</span>
-          )}
+          {thumb}
         </div>
-
         <div className="min-w-0 pr-3">
           <p className="text-xs font-semibold leading-snug text-slate-900">
             <span className="font-extrabold">{item.buyerName}</span>

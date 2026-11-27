@@ -120,10 +120,17 @@ export const ReviewEditorModal: React.FC<ReviewEditorModalProps> = ({ review, pr
         heading={creating ? 'Review details' : 'Review content'}
         submitLabel={creating ? 'Publish review' : 'Save changes'}
         showNameField={nameEditable}
+        showDateField
         autoFocus={false}
         initial={
           review
-            ? { rating: review.rating, title: review.title, comment: review.comment, displayName: review.displayName }
+            ? {
+                rating: review.rating,
+                title: review.title,
+                comment: review.comment,
+                displayName: review.displayName,
+                createdAt: review.createdAt,
+              }
             : { displayName: '' }
         }
         note={

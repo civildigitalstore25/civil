@@ -49,6 +49,23 @@ const parseRating = (value: unknown): number | null => {
     : null;
 };
 
+/** Admins may set a custom review date (YYYY-MM-DD or ISO). Rejects invalid / far-future values. */
+const parseAdminCreatedAt = (value: unknown): Date | null => {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const max = Date.now() + 24 * 60 * 60 * 1000;
+  if (date.getTime() > max) return null;
+  return date;
+};
+
+const persistAdminCreatedAt = async (reviewId: Types.ObjectId, body: Record<string, unknown>) => {
+  const createdAt = parseAdminCreatedAt(body.createdAt);
+  if (!createdAt) return null;
+  await Review.updateOne({ _id: reviewId }, { $set: { createdAt } });
+  return createdAt;
+};
+
 interface ReviewInput {
   rating: number;
   title: string;
@@ -418,6 +435,8 @@ export const createReview = async (req: AuthRequest, res: Response): Promise<voi
         approvedAt: new Date(),
         approvedBy: user._id,
       });
+      const customDate = await persistAdminCreatedAt(review._id as Types.ObjectId, body);
+      if (customDate) review.createdAt = customDate;
       await syncProductRating(product._id as Types.ObjectId);
       res.status(201).json({ success: true, message: 'Review published successfully.', review: adminReview(review) });
       return;
@@ -507,6 +526,8 @@ export const updateReview = async (req: AuthRequest, res: Response): Promise<voi
     review.title = parsed.value.title;
     review.comment = parsed.value.comment;
     await review.save();
+    const customDate = await persistAdminCreatedAt(review._id as Types.ObjectId, body);
+    if (customDate) review.createdAt = customDate;
     await syncProductRating(review.product);
     await review.populate([
       { path: 'product', select: 'name slug' },
@@ -680,6 +701,8 @@ export const adminCreateReview = async (req: AuthRequest, res: Response): Promis
       approvedAt: new Date(),
       approvedBy: user._id,
     });
+    const customDate = await persistAdminCreatedAt(review._id as Types.ObjectId, body);
+    if (customDate) review.createdAt = customDate;
     await syncProductRating(product._id as Types.ObjectId);
     await review.populate([
       { path: 'product', select: 'name slug' },

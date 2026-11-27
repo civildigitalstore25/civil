@@ -33,7 +33,8 @@ import {
   type ReviewSummary,
 } from '../../types/review';
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 50;
+const REVIEWS_INITIAL_COUNT = 2;
 
 const SORT_OPTIONS: { value: ReviewSort; label: string }[] = [
   { value: 'newest', label: 'Newest' },
@@ -70,6 +71,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({ pr
   const [listLoading, setListLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [listError, setListError] = useState('');
+  const [showAllReviews, setShowAllReviews] = useState(false);
 
   const [mine, setMine] = useState<OwnReview | null>(null);
   const [mineLoading, setMineLoading] = useState(false);
@@ -91,6 +93,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({ pr
       else {
         setListLoading(true);
         setListError('');
+        setShowAllReviews(false);
       }
       const result = await reviewApi.getProductReviews(productId, {
         page: nextPage,
@@ -241,7 +244,12 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({ pr
     if (!adminEditing) return { ok: false };
     const payload: ReviewInput = adminEditing.isAdminCreated
       ? input
-      : { rating: input.rating, title: input.title, comment: input.comment };
+      : {
+          rating: input.rating,
+          title: input.title,
+          comment: input.comment,
+          ...(input.createdAt ? { createdAt: input.createdAt } : {}),
+        };
     const result = await reviewApi.admin.update(adminEditing.id, payload);
     if (!result.ok) {
       if (result.sessionExpired || result.status === 404) {
@@ -535,6 +543,7 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({ pr
         heading={isAdmin ? 'Add a review (admin)' : formMode === 'edit' ? 'Edit your review' : 'Write a review'}
         submitLabel={isAdmin ? 'Publish review' : formMode === 'edit' ? (mine?.status === 'rejected' ? 'Resubmit review' : 'Update review') : 'Submit review'}
         showNameField={isAdmin}
+        showDateField={isAdmin}
         initial={
           isAdmin
             ? { displayName: '' }
@@ -617,21 +626,33 @@ export const ProductReviewsSection: React.FC<ProductReviewsSectionProps> = ({ pr
       );
     }
 
+    const shouldCollapse = visibleReviews.length > REVIEWS_INITIAL_COUNT || hasMore;
+    const displayedReviews =
+      shouldCollapse && !showAllReviews
+        ? visibleReviews.slice(0, REVIEWS_INITIAL_COUNT)
+        : visibleReviews;
+
     return (
       <div className="space-y-3">
-        {visibleReviews.map((review) => (
+        {displayedReviews.map((review) => (
           <ReviewCard key={review.id} review={review} actions={adminActions(review)} />
         ))}
-        {hasMore && (
-          <div className="pt-1 text-center">
+        {shouldCollapse && (
+          <div className="pt-1">
             <button
               type="button"
               disabled={loadingMore}
-              onClick={() => void loadReviews(page + 1, true)}
-              className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 transition hover:border-[#F5A623] hover:text-[#D97706] disabled:opacity-60"
+              onClick={() => {
+                if (showAllReviews && !hasMore) {
+                  setShowAllReviews(false);
+                  return;
+                }
+                setShowAllReviews(true);
+                if (hasMore) void loadReviews(page + 1, true);
+              }}
+              className="text-sm font-medium text-[#D97706] transition hover:underline disabled:opacity-60"
             >
-              {loadingMore && <Loader2 className="h-4 w-4 animate-spin" />}
-              {loadingMore ? 'Loading\u2026' : `Show more reviews (${Math.max(0, filteredTotal - reviews.length)} more)`}
+              {loadingMore ? 'Loading\u2026' : showAllReviews && !hasMore ? 'See less reviews...' : 'See more reviews...'}
             </button>
           </div>
         )}
