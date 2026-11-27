@@ -18,6 +18,7 @@ const MENU_OPTIONS = [
   { key: 'banners', label: 'Homepage Banners' },
   { key: 'categories', label: 'Brands & Categories' },
   { key: 'orders', label: 'Orders' },
+  { key: 'carts', label: 'Cart' },
   { key: 'reviews', label: 'Reviews' },
   { key: 'users', label: 'User Management' },
   { key: 'admins', label: 'Admin Management' },

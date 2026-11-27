@@ -1,6 +1,28 @@
 import { apiRequest } from './apiClient';
 import type { Product } from '../types/product';
 
+export interface ProductSuggestion {
+  id: string;
+  name: string;
+  slug: string;
+  image: string;
+  brand: string;
+  category: string;
+  software: string;
+  price: number;
+  isFree: boolean;
+}
+
+export interface ProductSearchParams {
+  search?: string;
+  category?: string;
+  software?: string;
+  brand?: string;
+  sort?: string;
+  isBestSeller?: boolean;
+  limit?: number;
+}
+
 interface ProductListResponse {
   success: boolean;
   products?: Product[];
@@ -61,6 +83,51 @@ export const productApi = {
     const { response, data } = await apiRequest<ProductListResponse>('/products?limit=500');
     if (!response.ok || !data.products) {
       throw new Error(data.message || 'Failed to load products');
+    }
+    return data.products.map((product) => mapProduct(product));
+  },
+
+  async suggest(
+    query: string,
+    category?: string,
+    limit = 10,
+    signal?: AbortSignal,
+  ): Promise<ProductSuggestion[]> {
+    const params = new URLSearchParams();
+    params.set('q', query.trim());
+    params.set('limit', String(limit));
+    if (category && category !== 'All' && category !== 'All Categories') {
+      params.set('category', category);
+    }
+    const { response, data } = await apiRequest<{
+      success: boolean;
+      suggestions?: ProductSuggestion[];
+    }>(`/products/suggestions?${params.toString()}`, { signal });
+    if (!response.ok || !data.success || !Array.isArray(data.suggestions)) {
+      return [];
+    }
+    return data.suggestions;
+  },
+
+  async search(params: ProductSearchParams, signal?: AbortSignal): Promise<Product[]> {
+    const qs = new URLSearchParams();
+    qs.set('status', 'active');
+    qs.set('limit', String(params.limit ?? 200));
+    if (params.search?.trim()) qs.set('search', params.search.trim());
+    if (params.category && params.category !== 'All' && params.category !== 'All Categories') {
+      qs.set('category', params.category);
+    }
+    if (params.software && params.software !== 'All') qs.set('software', params.software);
+    if (params.brand && params.brand !== 'All') qs.set('brand', params.brand);
+    if (params.sort) qs.set('sort', params.sort);
+    if (params.isBestSeller) qs.set('isBestSeller', 'true');
+
+    const { response, data } = await apiRequest<ProductListResponse>(
+      `/products?${qs.toString()}`,
+      { signal },
+    );
+    if (!response.ok || !data.products) {
+      throw new Error(data.message || 'Failed to search products');
     }
     return data.products.map((product) => mapProduct(product));
   },

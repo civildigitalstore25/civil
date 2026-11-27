@@ -1,15 +1,21 @@
-import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect, useRef } from 'react';
 import type { CartItem, AppliedCoupon, CartSummary } from '../types/cart';
 import type { Product } from '../types/product';
 import { cartService } from '../services/cartService';
 import { couponService } from '../services/couponService';
 import { apiRequest } from '../services/apiClient';
+import { useAuth } from '../hooks/useAuth';
 import { isScheduleActive } from '../utils/productDisplay';
+
+type AddToCartProduct = Product & {
+  brand?: string;
+  license?: string;
+};
 
 interface CartContextType {
   cartItems: CartItem[];
   appliedCoupon: AppliedCoupon | null;
-  addToCart: (product: Product, quantity?: number) => void;
+  addToCart: (product: AddToCartProduct, quantity?: number) => void;
   updateQuantity: (id: string, delta: number) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
@@ -20,14 +26,104 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
+const extractLicenseLabel = (name: string, productId: string, explicit?: string): string => {
+  if (explicit && explicit.trim()) return explicit.trim();
+  const match = /\(([^()]+)\)\s*$/.exec(name.trim());
+  if (match && match[1]) return match[1].trim();
+  const planPart = productId.includes('::') ? productId.split('::')[1]?.trim() : '';
+  if (!planPart) return 'Standard';
+  if (planPart === 'lifetime') return 'Lifetime';
+  if (planPart === 'membership') return 'Membership';
+  if (planPart === 'ebook') return 'eBook';
+  return planPart;
+};
+
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentUser, isAuthenticated } = useAuth();
   const [cartItems, setCartItems] = useState<CartItem[]>(() => cartService.getCart());
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+
+  const hydratedUserIdRef = useRef<string | null>(null);
+  const skipNextSyncRef = useRef(false);
+  const cartItemsRef = useRef<CartItem[]>(cartItems);
+  cartItemsRef.current = cartItems;
 
   // Sync to LocalStorage on every cart update
   useEffect(() => {
     cartService.saveCart(cartItems);
   }, [cartItems]);
+
+  // Hydrate and merge cart with backend when user authenticates; clear on logout
+  useEffect(() => {
+    if (!isAuthenticated || !currentUser?.id) {
+      if (hydratedUserIdRef.current) {
+        hydratedUserIdRef.current = null;
+        skipNextSyncRef.current = true;
+        setCartItems([]);
+        cartService.clearCart();
+        setAppliedCoupon(null);
+      }
+      return;
+    }
+
+    if (hydratedUserIdRef.current === currentUser.id) return;
+
+    let cancelled = false;
+    const userId = currentUser.id;
+    const localItems = cartItemsRef.current;
+
+    void cartService.fetchMyCart().then((serverItems) => {
+      if (cancelled) return;
+      hydratedUserIdRef.current = userId;
+
+      if (serverItems === null) {
+        return;
+      }
+
+      const mergedMap = new Map<string, CartItem>();
+      for (const item of serverItems) {
+        mergedMap.set(item.productId || item.id, item);
+      }
+      for (const item of localItems) {
+        const key = item.productId || item.id;
+        if (!mergedMap.has(key)) {
+          mergedMap.set(key, item);
+        }
+      }
+
+      const merged = Array.from(mergedMap.values());
+      const hasLocalAdditions = localItems.some(
+        (local) => !serverItems.some((srv) => (srv.productId || srv.id) === (local.productId || local.id))
+      );
+
+      skipNextSyncRef.current = true;
+      setCartItems(merged);
+
+      if (hasLocalAdditions) {
+        void cartService.syncMyCart(merged);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, currentUser?.id]);
+
+  // Push cart updates to backend whenever an authenticated user modifies their cart
+  useEffect(() => {
+    if (!isAuthenticated || !currentUser?.id) return;
+    if (hydratedUserIdRef.current !== currentUser.id) return;
+    if (skipNextSyncRef.current) {
+      skipNextSyncRef.current = false;
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void cartService.syncMyCart(cartItems);
+    }, 150);
+
+    return () => window.clearTimeout(timer);
+  }, [cartItems, isAuthenticated, currentUser?.id]);
 
   // Free offers (like civil-ecommerce): re-check each cart product so items whose free window is
   // live show as ₹0. The server re-verifies the window at checkout, so this is display only.
@@ -68,12 +164,15 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [cartProductKey]);
 
-  const addToCart = (product: Product, quantity: number = 1) => {
+  const addToCart = (product: AddToCartProduct, quantity: number = 1) => {
     setCartItems((prevItems) => {
       const existingIndex = prevItems.findIndex((item) => item.productId === product.id || item.id === product.id);
       if (existingIndex > -1) {
         const updated = [...prevItems];
-        updated[existingIndex].quantity += quantity;
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: updated[existingIndex].quantity + quantity,
+        };
         return updated;
       }
 
@@ -81,7 +180,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: product.id,
         productId: product.id,
         name: product.name,
+        brand: product.brand || product.company || product.software || '',
         category: product.category,
+        license: extractLicenseLabel(product.name, product.id, product.license),
         image: product.images[0] || '',
         format: product.format,
         fileSize: product.fileSize,
@@ -112,9 +213,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const clearCart = () => {
+    skipNextSyncRef.current = true;
     setCartItems([]);
     cartService.clearCart();
     setAppliedCoupon(null);
+    if (isAuthenticated && currentUser?.id) {
+      void cartService.clearServerCart();
+    }
   };
 
   const applyCoupon = async (code: string): Promise<{ success: boolean; message: string }> => {

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import AnnouncementBar from '../components/layout/AnnouncementBar';
 import Header from '../components/layout/Header';
 import Navbar from '../components/layout/Navbar';
@@ -10,8 +10,9 @@ import MobileFilterDrawer from '../components/filter/MobileFilterDrawer';
 import WhatsAppButton from '../components/common/WhatsAppButton';
 import { useProducts } from '../context/ProductContext';
 import { useBackendBrands } from '../hooks/useBackendBrands';
+import { productApi } from '../services/productApi';
 import type { CategoryDefinition } from '../data/categories';
-import type { FilterState, ProductCategory, SoftwareCompatibility } from '../types/product';
+import type { FilterState, Product, ProductCategory, SoftwareCompatibility } from '../types/product';
 import { slugify } from '../utils/slugify';
 
 const INITIAL_FILTERS: FilterState = {
@@ -40,37 +41,85 @@ interface ProductListingPageProps {
 export const ProductListingPage: React.FC<ProductListingPageProps> = ({ categoryDef }) => {
   const { products } = useProducts();
   const { brands } = useBackendBrands();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const filterParam = searchParams.get('filter')?.toLowerCase();
   const brandParam = (searchParams.get('brand') || '').trim().toLowerCase();
   const categoryParam = (searchParams.get('category') || '').trim().toLowerCase();
+  const searchParam = (searchParams.get('search') || searchParams.get('q') || '').trim();
   const selectedBrand = brands.find((brand) => brand.slug.toLowerCase() === brandParam);
   const selectedCategory = (selectedBrand?.categories ?? brands.flatMap((brand) => brand.categories)).find(
     (category) => category.slug.toLowerCase() === categoryParam,
   );
 
+  const [serverSearchResults, setServerSearchResults] = useState<Product[] | null>(null);
+  const [isSearchingServer, setIsSearchingServer] = useState(false);
+
   const [filters, setFilters] = useState<FilterState>(() => {
-    if (!categoryDef) return INITIAL_FILTERS;
+    if (!categoryDef) return { ...INITIAL_FILTERS, searchQuery: searchParam };
     if (categoryDef.filterType === 'software') {
-      return { ...INITIAL_FILTERS, software: [categoryDef.filterValue as SoftwareCompatibility] };
+      return { ...INITIAL_FILTERS, searchQuery: searchParam, software: [categoryDef.filterValue as SoftwareCompatibility] };
     }
     if (categoryDef.filterType === 'category') {
-      return { ...INITIAL_FILTERS, categories: [categoryDef.filterValue as ProductCategory] };
+      return { ...INITIAL_FILTERS, searchQuery: searchParam, categories: [categoryDef.filterValue as ProductCategory] };
     }
-    return INITIAL_FILTERS;
+    return { ...INITIAL_FILTERS, searchQuery: searchParam };
   });
 
   useEffect(() => {
     if (categoryDef) {
       if (categoryDef.filterType === 'software') {
-        setFilters({ ...INITIAL_FILTERS, software: [categoryDef.filterValue as SoftwareCompatibility] });
+        setFilters({ ...INITIAL_FILTERS, searchQuery: searchParam, software: [categoryDef.filterValue as SoftwareCompatibility] });
       } else if (categoryDef.filterType === 'category') {
-        setFilters({ ...INITIAL_FILTERS, categories: [categoryDef.filterValue as ProductCategory] });
+        setFilters({ ...INITIAL_FILTERS, searchQuery: searchParam, categories: [categoryDef.filterValue as ProductCategory] });
       }
     } else {
-      setFilters(INITIAL_FILTERS);
+      setFilters({ ...INITIAL_FILTERS, searchQuery: searchParam });
     }
-  }, [categoryDef]);
+  }, [categoryDef, searchParam]);
+
+  // Execute search filtering server-side when a search query is active
+  useEffect(() => {
+    const query = filters.searchQuery.trim();
+    if (!query) {
+      setServerSearchResults(null);
+      setIsSearchingServer(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setIsSearchingServer(true);
+
+    void productApi
+      .search(
+        {
+          search: query,
+          category: categoryParam || undefined,
+          brand: brandParam || undefined,
+          sort: filters.sortBy,
+          isBestSeller: filterParam === 'best-seller' || filterParam === 'best-sellers',
+          limit: 200,
+        },
+        controller.signal,
+      )
+      .then((results) => {
+        if (!controller.signal.aborted) {
+          setServerSearchResults(results);
+        }
+      })
+      .catch((err) => {
+        if ((err as Error)?.name !== 'AbortError' && !controller.signal.aborted) {
+          setServerSearchResults(null);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsSearchingServer(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [filters.searchQuery, filters.sortBy, categoryParam, brandParam, filterParam]);
 
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
@@ -80,6 +129,9 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({ category
 
   const handleClearFilters = () => {
     setFilters(INITIAL_FILTERS);
+    if (searchParam || categoryParam || brandParam) {
+      navigate('/products');
+    }
   };
 
   const handleQuickCategorySelect = (cat: ProductCategory | 'All') => {
@@ -90,9 +142,12 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({ category
     }
   };
 
-  // Filter & Sort Logic using dynamic products array
+  // Filter & Sort Logic using server-side search results when searching, or catalog products
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
+    const usingServerSearch = Boolean(filters.searchQuery.trim() && serverSearchResults !== null);
+    const sourceProducts = usingServerSearch && serverSearchResults ? serverSearchResults : products;
+
+    return sourceProducts.filter((product) => {
       if (product.status === 'inactive' || product.status === 'draft') return false;
 
       // Handle URL Filter parameter (?filter=best-seller or ?filter=new-arrivals)
@@ -102,13 +157,16 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({ category
         if (!product.isNewArrival && product.badge !== 'New') return false;
       }
 
-      if (brandParam) {
+      if (!usingServerSearch && brandParam) {
         const brandName = product.brand || product.software || product.company || '';
         if (slugify(brandName) !== brandParam && brandName.trim().toLowerCase() !== brandParam) return false;
       }
-      if (categoryParam) {
+      if (!usingServerSearch && categoryParam) {
         const categorySlug = (product.categorySlug || slugify(product.category || '')).toLowerCase();
-        if (categorySlug !== categoryParam && (product.category || '').trim().toLowerCase() !== categoryParam) {
+        const catMatch = categorySlug === categoryParam || (product.category || '').trim().toLowerCase() === categoryParam;
+        const softMatch = (product.software || '').trim().toLowerCase() === categoryParam;
+        const brandMatch = (product.brand || '').trim().toLowerCase() === categoryParam;
+        if (!catMatch && !softMatch && !brandMatch) {
           return false;
         }
       }
@@ -136,13 +194,14 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({ category
       if (filters.minRating > 0 && product.rating < filters.minRating) {
         return false;
       }
-      // Search query
-      if (filters.searchQuery.trim()) {
+      // Fallback local search filter if server search hasn't returned yet
+      if (!usingServerSearch && filters.searchQuery.trim()) {
         const q = filters.searchQuery.toLowerCase();
         const matchesName = product.name.toLowerCase().includes(q);
         const matchesCategory = product.category.toLowerCase().includes(q);
         const matchesSoftware = product.software.toLowerCase().includes(q);
-        if (!matchesName && !matchesCategory && !matchesSoftware) return false;
+        const matchesBrand = (product.brand || '').toLowerCase().includes(q);
+        if (!matchesName && !matchesCategory && !matchesSoftware && !matchesBrand) return false;
       }
       return true;
     }).sort((a, b) => {
@@ -156,7 +215,7 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({ category
       }
       return 0; // featured default order
     });
-  }, [products, filters, filterParam, brandParam, categoryParam]);
+  }, [products, serverSearchResults, filters, filterParam, brandParam, categoryParam]);
 
   const activeCategoryPill =
     filters.categories.length === 1 ? filters.categories[0] : 'All';
@@ -193,7 +252,9 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({ category
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                {categoryDef
+                {filters.searchQuery.trim()
+                  ? `Search: "${filters.searchQuery.trim()}"`
+                  : categoryDef
                   ? `${categoryDef.name} Digital Bundles`
                   : selectedCategory
                   ? selectedCategory.name
@@ -206,7 +267,11 @@ export const ProductListingPage: React.FC<ProductListingPageProps> = ({ category
                   : 'All Software Products'}
               </h1>
               <p className="text-slate-500 text-xs sm:text-sm mt-1">
-                {categoryDef
+                {filters.searchQuery.trim()
+                  ? isSearchingServer
+                    ? 'Searching catalog on server...'
+                    : `Showing ${filteredProducts.length} matching product${filteredProducts.length === 1 ? '' : 's'}.`
+                  : categoryDef
                   ? categoryDef.description
                   : selectedCategory
                   ? `Products in ${selectedBrand ? `${selectedBrand.name} / ` : ''}${selectedCategory.name}.`

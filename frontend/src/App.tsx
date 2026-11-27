@@ -32,6 +32,7 @@ import AdminBannersPage from './pages/admin/AdminBannersPage';
 import AdminCouponsPage from './pages/admin/AdminCouponsPage';
 import AdminUsersPage from './pages/admin/AdminUsersPage';
 import AdminOrdersPage from './pages/admin/AdminOrdersPage';
+import AdminCartsPage from './pages/admin/AdminCartsPage';
 import AdminProfilePage from './pages/admin/AdminProfilePage';
 import AdminReviewsPage from './pages/admin/AdminReviewsPage';
 
@@ -223,6 +224,14 @@ function App() {
                     element={
                       <AdminRoute>
                         <AdminOrdersPage />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/carts"
+                    element={
+                      <AdminRoute>
+                        <AdminCartsPage />
                       </AdminRoute>
                     }
                   />

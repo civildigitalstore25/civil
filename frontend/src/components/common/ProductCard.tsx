@@ -49,9 +49,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, compact = fal
         ...product,
         id: `${product.id}::${plan.id}`,
         name: plans.length > 1 ? `${product.name} (${plan.label})` : product.name,
+        license: plan.label,
         price,
         oldPrice: compare,
-      },
+      } as Product & { license?: string },
       1,
     );
     if (freeOn) {

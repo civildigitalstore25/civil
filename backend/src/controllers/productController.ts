@@ -4,6 +4,194 @@ import Product, { type IProduct } from '../models/Product.js';
 import User from '../models/User.js';
 import { AUTH } from '../constants/auth.js';
 import { config } from '../config/index.js';
+import { isDealActive, isFreeOfferActive } from '../utils/productSchedule.js';
+
+const escapeRegex = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const positiveAmount = (value: unknown): number => {
+  const num = typeof value === 'number' ? value : Number(String(value || '').replace(/,/g, ''));
+  return Number.isFinite(num) && num > 0 ? num : 0;
+};
+
+const buildSearchCondition = (rawSearch: string): Record<string, any> | null => {
+  const tokens = rawSearch
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 5);
+  if (tokens.length === 0) return null;
+
+  const tokenConditions = tokens.map((token) => {
+    const regex = new RegExp(escapeRegex(token), 'i');
+    return {
+      $or: [
+        { name: regex },
+        { slug: regex },
+        { brand: regex },
+        { company: regex },
+        { software: regex },
+        { category: regex },
+        { seoKeywords: regex },
+      ],
+    };
+  });
+
+  return tokenConditions.length === 1 ? (tokenConditions[0] ?? null) : { $and: tokenConditions };
+};
+
+const buildCategoryScopeCondition = (rawCategory: string): Record<string, any> | null => {
+  const trimmed = rawCategory.trim();
+  if (!trimmed || trimmed === 'All' || trimmed === 'All Categories') return null;
+  const regex = new RegExp(escapeRegex(trimmed), 'i');
+  return {
+    $or: [
+      { category: regex },
+      { software: regex },
+      { brand: regex },
+      { company: regex },
+    ],
+  };
+};
+
+const computeEffectivePriceINR = (p: any): { price: number; isFree: boolean } => {
+  if (isFreeOfferActive(p)) {
+    return { price: 0, isFree: true };
+  }
+
+  const dealOn = isDealActive(p);
+  const candidates: number[] = [];
+
+  const pushIfPositive = (val: unknown) => {
+    const amt = positiveAmount(val);
+    if (amt > 0) candidates.push(amt);
+  };
+
+  pushIfPositive(dealOn ? positiveAmount(p.dealEbookPriceINR) || p.ebookPriceINR : p.ebookPriceINR);
+  pushIfPositive(
+    dealOn
+      ? positiveAmount(p.dealLifetimePriceINR) || p.lifetimePriceINR || p.lifetimePrice
+      : p.lifetimePriceINR || p.lifetimePrice
+  );
+  pushIfPositive(
+    dealOn
+      ? positiveAmount(p.dealMembershipPriceINR) || p.membershipPriceINR || p.membershipPrice
+      : p.membershipPriceINR || p.membershipPrice
+  );
+
+  const subRows = Array.isArray(p.subscriptionDurations) && p.subscriptionDurations.length
+    ? p.subscriptionDurations
+    : Array.isArray(p.subscriptions)
+      ? p.subscriptions
+      : [];
+  const dealSubRows = Array.isArray(p.dealSubscriptionDurations) && p.dealSubscriptionDurations.length
+    ? p.dealSubscriptionDurations
+    : Array.isArray(p.dealSubscriptions)
+      ? p.dealSubscriptions
+      : [];
+
+  subRows.forEach((row: any, idx: number) => {
+    const regular = positiveAmount(row?.priceINR || row?.price);
+    const dealRow = dealSubRows[idx];
+    const deal = dealOn ? positiveAmount(dealRow?.priceINR || dealRow?.price) : 0;
+    pushIfPositive(deal || regular);
+  });
+
+  if (candidates.length > 0) {
+    return { price: Math.min(...candidates), isFree: false };
+  }
+
+  return { price: positiveAmount(p.price), isFree: false };
+};
+
+const scoreSuggestion = (p: any, queryLower: string, tokens: string[]): number => {
+  const name = String(p.name || '').toLowerCase();
+  const brand = String(p.brand || p.company || p.software || '').toLowerCase();
+  const category = String(p.category || '').toLowerCase();
+
+  let score = 0;
+  if (name === queryLower) score += 200;
+  else if (name.startsWith(queryLower)) score += 120;
+  else if (name.split(/\s+/).some((word) => word.startsWith(queryLower))) score += 80;
+  else if (name.includes(queryLower)) score += 50;
+
+  for (const token of tokens) {
+    if (name.startsWith(token)) score += 25;
+    else if (name.includes(token)) score += 15;
+    if (brand.includes(token) || category.includes(token)) score += 10;
+  }
+
+  if (p.isBestSeller) score += 5;
+  return score;
+};
+
+export const getProductSuggestions = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const rawQuery = String(req.query.q ?? req.query.search ?? '').trim();
+    const rawCategory = String(req.query.category ?? '').trim();
+    const limit = Math.min(20, Math.max(1, Number(req.query.limit) || 10));
+
+    if (!rawQuery) {
+      res.json({ success: true, suggestions: [] });
+      return;
+    }
+
+    const andFilters: Record<string, any>[] = [{ status: 'active' }];
+    const searchCond = buildSearchCondition(rawQuery);
+    if (searchCond) andFilters.push(searchCond);
+
+    const categoryCond = buildCategoryScopeCondition(rawCategory);
+    if (categoryCond) andFilters.push(categoryCond);
+
+    const filter = andFilters.length === 1 ? andFilters[0] : { $and: andFilters };
+
+    const candidates = await Product.find(filter)
+      .select(
+        'name slug images imageUrl price oldPrice brand company software category isBestSeller downloadsCount isFreeProduct freeProductStartDate freeProductStartTime freeProductEndDate freeProductEndTime isDeal dealStartDate dealStartTime dealEndDate dealEndTime ebookPriceINR lifetimePrice lifetimePriceINR membershipPrice membershipPriceINR subscriptionDurations subscriptions dealEbookPriceINR dealLifetimePriceINR dealMembershipPriceINR dealSubscriptionDurations dealSubscriptions'
+      )
+      .limit(limit * 4)
+      .lean();
+
+    const queryLower = rawQuery.toLowerCase();
+    const tokens = queryLower.split(/\s+/).filter(Boolean).slice(0, 5);
+
+    const ranked = candidates
+      .map((prod) => ({
+        prod,
+        score: scoreSuggestion(prod, queryLower, tokens),
+      }))
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        const dlDiff = (Number(b.prod.downloadsCount) || 0) - (Number(a.prod.downloadsCount) || 0);
+        if (dlDiff !== 0) return dlDiff;
+        return String(a.prod.name || '').localeCompare(String(b.prod.name || ''));
+      })
+      .slice(0, limit)
+      .map(({ prod }) => {
+        const { price, isFree } = computeEffectivePriceINR(prod);
+        const image =
+          (Array.isArray(prod.images) && prod.images[0]) ||
+          (typeof prod.imageUrl === 'string' ? prod.imageUrl : '') ||
+          '';
+        return {
+          id: prod._id.toString(),
+          name: prod.name,
+          slug: prod.slug,
+          image,
+          brand: prod.brand || prod.company || prod.software || '',
+          category: prod.category || '',
+          software: prod.software || '',
+          price,
+          isFree,
+        };
+      });
+
+    res.setHeader('Cache-Control', 'public, max-age=30');
+    res.json({ success: true, suggestions: ranked });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch suggestions', error });
+  }
+};
 
 const checkIsAdmin = async (req: Request): Promise<boolean> => {
   try {
@@ -40,61 +228,84 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
       search,
       category,
       software,
+      brand,
       status,
       isBestSeller,
       isOutOfStock,
+      sort,
       page = 1,
       limit = 100
     } = req.query;
 
-    const filter: Record<string, any> = {};
+    const andFilters: Record<string, any>[] = [];
 
-    if (search) {
-      const searchRegex = new RegExp(String(search), 'i');
-      filter.$or = [
-        { name: searchRegex },
-        { slug: searchRegex },
-        { software: searchRegex },
-        { category: searchRegex },
-        { seoKeywords: searchRegex }
-      ];
+    if (search && String(search).trim()) {
+      const searchCond = buildSearchCondition(String(search));
+      if (searchCond) andFilters.push(searchCond);
     }
 
-    if (category && category !== 'All') {
-      filter.category = category;
+    if (category && category !== 'All' && category !== 'All Categories') {
+      const catCond = buildCategoryScopeCondition(String(category));
+      if (catCond) andFilters.push(catCond);
     }
 
     if (software && software !== 'All') {
-      filter.software = software;
+      andFilters.push({ software: new RegExp(`^${escapeRegex(String(software).trim())}$`, 'i') });
+    }
+
+    if (brand && brand !== 'All') {
+      const brandRegex = new RegExp(`^${escapeRegex(String(brand).trim())}$`, 'i');
+      andFilters.push({ $or: [{ brand: brandRegex }, { company: brandRegex }, { software: brandRegex }] });
     }
 
     if (status && status !== 'all') {
-      filter.status = status;
+      andFilters.push({ status });
     }
 
     if (isBestSeller === 'true') {
-      filter.isBestSeller = true;
+      andFilters.push({ isBestSeller: true });
     }
 
     if (isOutOfStock === 'true') {
-      filter.isOutOfStock = true;
+      andFilters.push({ isOutOfStock: true });
     }
 
-    const isAdmin = await checkIsAdmin(req);
-    const skip = (Number(page) - 1) * Number(limit);
-    const total = await Product.countDocuments(filter);
-    const products = await Product.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(Number(limit) || 200);
+    const filter =
+      andFilters.length === 0
+        ? {}
+        : andFilters.length === 1
+          ? andFilters[0]
+          : { $and: andFilters };
+
+    const sortMap: Record<string, Record<string, 1 | -1>> = {
+      'price-low': { price: 1, createdAt: -1 },
+      'price-high': { price: -1, createdAt: -1 },
+      rating: { rating: -1, reviewCount: -1 },
+      newest: { createdAt: -1 },
+    };
+    const sortQuery = sortMap[String(sort || '')] || { createdAt: -1 };
+
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.min(500, Math.max(1, Number(limit) || 100));
+    const skip = (pageNum - 1) * limitNum;
+
+    const [isAdmin, total, products] = await Promise.all([
+      checkIsAdmin(req),
+      Product.countDocuments(filter),
+      Product.find(filter)
+        .sort(sortQuery)
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+    ]);
 
     const sanitizedProducts = products.map((p) => sanitizeProduct(p, isAdmin));
 
     res.json({
       success: true,
       total,
-      page: Number(page),
-      limit: Number(limit),
+      page: pageNum,
+      limit: limitNum,
       products: sanitizedProducts,
     });
   } catch (error) {
