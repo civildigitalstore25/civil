@@ -15,6 +15,7 @@ import MyOrdersPage from './pages/account/MyOrdersPage';
 import OrderDetailsPage from './pages/account/OrderDetailsPage';
 import SlugResolver from './routes/SlugResolver';
 import ScrollToTop from './components/common/ScrollToTop';
+import MetaPixelTracker from './components/common/MetaPixelTracker';
 import RecentPurchaseToast from './components/common/RecentPurchaseToast';
 
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -49,6 +50,7 @@ function App() {
             <CartProvider>
               <Router>
                 <ScrollToTop />
+                <MetaPixelTracker />
                 <RecentPurchaseToast />
                 <Routes>
                   {/* Public General Routes */}
